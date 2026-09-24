@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from html import escape
 import json
 from pathlib import Path
@@ -11,6 +12,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+from PIL import Image, ImageOps
 
 
 st.set_page_config(
@@ -24,6 +26,12 @@ ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "output" / "five_sites_by_designation"
 BOUNDARY_PATH = ROOT / "assets" / "skorea-provinces-geo.json"
 MUNICIPAL_BOUNDARY_PATH = ROOT / "assets" / "jeolla-municipalities-geo.json"
+SITE_IMAGES = {
+    "전북무주": ROOT / "무주태권도원.jpg",
+    "전남완도": ROOT / "완도해양치유센터.jpg",
+    "전북순창": ROOT / "순창쉴랜드.jpg",
+    "전북완주": ROOT / "완주아원고택.jpg",
+}
 PERIODS = ["P1", "P2", "P3", "P4"]
 PERIOD_SHORT = {"P1": "선정 2년 전", "P2": "선정 직전 1년", "P3": "선정 후 1년", "P4": "선정 후 2년"}
 
@@ -131,7 +139,7 @@ st.markdown(
     .map-selection .description { margin-top:.65rem; color:#43536A; font-size:.72rem; line-height:1.55; }
     .map-selection .address { margin-top:.55rem; padding:.55rem .62rem; border-radius:8px; background:#F3F7FA; color:#536276; font-size:.68rem; line-height:1.45; }
     .map-selection .address b { color:#172438; }
-    .map-guide { margin-top:.65rem; color:#667382; font-size:.65rem; }
+    [data-testid="stImage"] img { border-radius:11px; }
     div[data-testid="stVerticalBlockBorderWrapper"] { border-color:#DCE4EB; border-radius:14px; background:#FFFFFF; box-shadow:0 1px 2px rgba(16,24,35,.025); }
     div[data-testid="stVerticalBlockBorderWrapper"] > div { padding:.82rem .95rem .9rem; }
     .panel-title { font-size:1rem; font-weight:780; color:#172438; margin:0; }
@@ -214,7 +222,7 @@ st.markdown(
 
 
 @st.cache_data
-def csv(path: Path) -> pd.DataFrame:
+def csv(path: Path, modified_ns: int) -> pd.DataFrame:
     return pd.read_csv(path, encoding="utf-8-sig")
 
 
@@ -230,7 +238,6 @@ def jeolla_municipalities() -> dict:
         return json.load(handle)
 
 
-@st.cache_data
 def load_data() -> dict[str, pd.DataFrame]:
     files = {
         "kpi": DATA_DIR / "kpi_by_period.csv",
@@ -244,7 +251,7 @@ def load_data() -> dict[str, pd.DataFrame]:
         "poi": ROOT / "output" / "geo_tourism_density.csv",
         "nearest": ROOT / "output" / "geo_nearest_lodging.csv",
     }
-    return {name: csv(path) for name, path in files.items()}
+    return {name: csv(path, path.stat().st_mtime_ns) for name, path in files.items()}
 
 
 DATA = load_data()
@@ -593,6 +600,15 @@ def detail_button(panel: int, region_key: str, interval_name: str, display_perio
         show_panel_detail(panel, region_key, interval_name, display_period)
 
 
+@contextmanager
+def detail_panel(number: int, title: str, subtitle: str, region_key: str, interval_name: str, display_period: str):
+    with st.container(border=True, height="stretch", vertical_alignment="distribute"):
+        with st.container(gap="small"):
+            panel_head(number, title, subtitle)
+            yield
+        detail_button(number, region_key, interval_name, display_period)
+
+
 if "monitor_map_site" not in st.session_state or st.session_state.monitor_map_site not in set(SITES["지역키"]):
     st.session_state.monitor_map_site = SITES.iloc[0]["지역키"]
 selected_key = st.session_state.monitor_map_site
@@ -618,7 +634,7 @@ st.markdown(
 )
 map_col, selected_col = st.columns([.82, 1.18], gap="medium")
 with map_col:
-    with st.container(border=True):
+    with st.container(border=True, height="stretch"):
         event = st.plotly_chart(
             selection_map(selected_key),
             width="stretch",
@@ -632,22 +648,27 @@ with map_col:
         st.session_state.monitor_map_site = clicked_key
         st.rerun()
 with selected_col:
-    with st.container(border=True):
+    with st.container(border=True, height="stretch", vertical_alignment="center"):
         catalog_name = ALIASES.get(site["시설"], site["시설"])
         catalog_rows = DATA["site_catalog"].loc[DATA["site_catalog"]["시설명"].eq(catalog_name)]
         catalog = catalog_rows.iloc[0] if not catalog_rows.empty else pd.Series(dtype=object)
         theme = str(catalog.get("테마", "웰니스 관광지")) if not catalog.empty else "웰니스 관광지"
         address = catalog.get("tour_api_addr", "주소 정보 없음") if not catalog.empty else "주소 정보 없음"
         address = str(address) if pd.notna(address) and str(address).strip() else "주소 정보 없음"
-        st.markdown(
-            f'<div class="map-selection"><div class="place">SELECTED SITE</div><h2>{escape(site["시설"])}</h2>'
-            f'<div class="location">{escape(site["지역"])} · {escape(site["시설동"])} · {int(site["선정연도"])}년 지정</div>'
-            f'<div class="description">{escape(theme)} 테마의 웰니스 관광지</div>'
-            f'<div class="address"><b>주소</b><br>{escape(address)}</div>'
-            f'<div class="diagnosis"><b>현재 관찰</b><br>{escape(site["진단"])}<br><br><b>분석 단위</b><br>{escape(site["지역"])} 관광시장</div>'
-            '<div class="map-guide">시설 직접 성과는 현재 평가에서 제외하고 추후 과제로 남깁니다.</div></div>',
-            unsafe_allow_html=True,
-        )
+        photo_col, info_col = st.columns([.92, 1.08], gap="medium", vertical_alignment="center")
+        with photo_col:
+            with Image.open(SITE_IMAGES[selected_key]) as source_image:
+                site_photo = ImageOps.fit(source_image.convert("RGB"), (800, 560), method=Image.Resampling.LANCZOS)
+            st.image(site_photo, width="stretch")
+        with info_col:
+            st.markdown(
+                f'<div class="map-selection"><div class="place">SELECTED SITE</div><h2>{escape(site["시설"])}</h2>'
+                f'<div class="location">{escape(site["지역"])} · {escape(site["시설동"])} · {int(site["선정연도"])}년 지정</div>'
+                f'<div class="description">{escape(theme)} 테마의 웰니스 관광지</div>'
+                f'<div class="address"><b>주소</b><br>{escape(address)}</div>'
+                f'<div class="diagnosis"><b>현재 관찰</b><br>{escape(site["진단"])}<br><br><b>분석 단위</b><br>{escape(site["지역"])} 관광시장</div></div>',
+                unsafe_allow_html=True,
+            )
 
 ctl1, ctl2, ctl3 = st.columns([1.1, 1.1, 4])
 with ctl1:
@@ -688,8 +709,7 @@ slope_evidence, slope_evidence_cls = its_evidence(selected_key, focus_metric, "�
 # Row 1 ---------------------------------------------------------------------
 c1, c2, c3 = st.columns([1.05, 1.05, 1.15], gap="medium")
 with c1:
-    with st.container(border=True):
-        panel_head(1, "성과 한눈에", "현재 수준·변화·핵심 진단")
+    with detail_panel(1, "성과 한눈에", "현재 수준·변화·핵심 진단", selected_key, interval_name, display_period):
         st.markdown(
             f'<div class="site-head"><strong>{escape(site["시설"])}</strong><span>{escape(site["지역"])} {escape(site["시설동"])}</span></div>',
             unsafe_allow_html=True,
@@ -705,11 +725,9 @@ with c1:
             )
         st.markdown('<div class="metric-grid">' + "".join(cards) + "</div>", unsafe_allow_html=True)
         st.markdown(f'<div class="headline-diagnosis"><b>한 문장 진단</b><br>{escape(diagnosis_text)}</div>', unsafe_allow_html=True)
-        detail_button(1, selected_key, interval_name, display_period)
 
 with c2:
-    with st.container(border=True):
-        panel_head(2, "4개 관광지 비교", "같은 상대시점의 병목 방향")
+    with detail_panel(2, "4개 관광지 비교", "같은 상대시점의 병목 방향", selected_key, interval_name, display_period):
         compare_rows = []
         compare_metrics = FLOW
         for region in SITES.itertuples():
@@ -726,11 +744,9 @@ with c2:
             unsafe_allow_html=True,
         )
         st.markdown('<div class="measure-note">↑ 개선　→ 유지　↓ 하락　· 측정불충분</div>', unsafe_allow_html=True)
-        detail_button(2, selected_key, interval_name, display_period)
 
 with c3:
-    with st.container(border=True):
-        panel_head(3, "전환 퍼널", "각 단계의 지정 전후 변화")
+    with detail_panel(3, "전환 퍼널", "각 단계의 지정 전후 변화", selected_key, interval_name, display_period):
         funnel_data = []
         for stage, metric in FLOW:
             funnel_data.append((stage, change(selected_key, metric, growth_col, point_col), metric, status(selected_key, metric, status_col)))
@@ -753,13 +769,11 @@ with c3:
             f'<div class="funnel-note">하락 신호 · <b>{escape(bottleneck)}</b><br>±3% 기준 기술적 판정이며 단계 간 수치를 직접 비교하지 않습니다.</div>',
             unsafe_allow_html=True,
         )
-        detail_button(3, selected_key, interval_name, display_period)
 
 # Row 2 ---------------------------------------------------------------------
 c4, c5, c6 = st.columns([1.05, 1.05, 1.15], gap="medium")
 with c4:
-    with st.container(border=True):
-        panel_head(4, "선정 전후 성장 흐름", "선정 2년 전=100 · 단계별 변화")
+    with detail_panel(4, "선정 전후 성장 흐름", "선정 2년 전=100 · 단계별 변화", selected_key, interval_name, display_period):
         st.plotly_chart(trend_chart(selected_key), width="stretch", config={"displayModeBar": False})
         rows = []
         for metric in ["외지인방문자수", "숙박자비율_pct", "평균체류시간_분", "방문자대비관광소비_천원_proxy"]:
@@ -774,11 +788,9 @@ with c4:
             + "".join(rows) + '</tbody></table><div class="period-key"><div>2년 전→직전</div><div>직전→첫해</div><div>첫해→둘째해</div><div>실제 관측값</div></div>',
             unsafe_allow_html=True,
         )
-        detail_button(4, selected_key, interval_name, display_period)
 
 with c5:
-    with st.container(border=True):
-        panel_head(5, "방문 유입", "외지인 방문 규모와 주요 출발지역")
+    with detail_panel(5, "방문 유입", "외지인 방문 규모와 주요 출발지역", selected_key, interval_name, display_period):
         visitor_value = pd.to_numeric(latest.get("외지인방문자수"), errors="coerce")
         visitor_change = change(selected_key, "외지인방문자수", growth_col, point_col)
         origin = DATA["origin"].loc[(DATA["origin"]["지역키"].eq(selected_key)) & (DATA["origin"]["기간"].eq(display_period))].copy()
@@ -800,11 +812,9 @@ with c5:
                 share = float(row["비율(%)"])
                 origin_rows.append(f'<div class="origin-row"><span class="rank">{rank}</span><div>{escape(str(row["출발지역"]))}<div class="bar-bg"><div class="bar" style="width:{share / max_share * 100:.0f}%"></div></div></div><b>{share:.1f}%</b></div>')
             st.markdown("".join(origin_rows), unsafe_allow_html=True)
-        detail_button(5, selected_key, interval_name, display_period)
 
 with c6:
-    with st.container(border=True):
-        panel_head(6, "숙박·체류 구조", "전환·심화·계절 안정성")
+    with detail_panel(6, "숙박·체류 구조", "전환·심화·계절 안정성", selected_key, interval_name, display_period):
         env = []
         for label, metric in [
             ("숙박전환", "숙박자비율_pct"),
@@ -828,13 +838,11 @@ with c6:
             f'<div class="poi">{escape(kind)}<b>{int(poi_map.get(kind, 0))}</b></div>' for kind in poi_order[:4]
         ) + '</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="measure-note">계절안정=1−월별 방문 변동계수 · 반경 5km POI · {escape(near_text)}<br>주변 시설 수는 숙박환경을 설명하는 참고 정보입니다.</div>', unsafe_allow_html=True)
-        detail_button(6, selected_key, interval_name, display_period)
 
 # Row 3 ---------------------------------------------------------------------
 c7, c8, c9 = st.columns([1.05, 1.05, 1.15], gap="medium")
 with c7:
-    with st.container(border=True):
-        panel_head(7, "병목·구조변화", "기술적 판정과 ITS 근거 분리")
+    with detail_panel(7, "병목·구조변화", "기술적 판정과 ITS 근거 분리", selected_key, interval_name, display_period):
         observed = []
         for stage, metric in FLOW:
             code = status(selected_key, metric, status_col)
@@ -852,10 +860,9 @@ with c7:
             unsafe_allow_html=True,
         )
         st.markdown('<div class="measure-note">±3%는 방향 판정, ITS는 구조변화 탐색입니다. 대조군이 없어 지정의 인과효과로 해석하지 않습니다.</div>', unsafe_allow_html=True)
-        detail_button(7, selected_key, interval_name, display_period)
 
 with c8:
-    with st.container(border=True):
+    with st.container(border=True, height="stretch"):
         panel_head(8, "추가 검증 데이터", "병목 원인을 확인하려면 필요한 자료")
         html = []
         for number, title, reason in DATA_NEEDS[selected_key]:
@@ -866,7 +873,7 @@ with c8:
         st.markdown('<div class="measure-note">추가 자료 확보 전에는 변화의 원인을 확정하지 않습니다.</div>', unsafe_allow_html=True)
 
 with c9:
-    with st.container(border=True):
+    with st.container(border=True, height="stretch"):
         panel_head(9, "데이터 신뢰도", "공간단위와 확보 수준")
         has_origin = not DATA["origin"].loc[DATA["origin"]["지역키"].eq(selected_key)].empty
         reliability = [
@@ -883,7 +890,7 @@ with c9:
         )
         st.markdown(
             '<table class="reliability"><thead><tr><th>지표</th><th>공간단위</th><th>확보 수준</th></tr></thead><tbody>'
-            + table_rows + '</tbody></table><div class="measure-note"><b>시설 직접 성과는 추후 과제입니다.</b> 현재 시군구 관광시장 자료만으로 지역 흐름을 평가합니다.</div>',
+            + table_rows + '</tbody></table>',
             unsafe_allow_html=True,
         )
 
