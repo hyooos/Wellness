@@ -11,22 +11,16 @@
 streamlit run dashboard.py
 ```
 
-지도에서 시설을 선택하는 버전:
-
-```bash
-streamlit run dashboard_map.py
-```
-
-9개 진단 영역을 한 화면에서 보는 모니터 버전:
-
-```bash
-streamlit run dashboard_monitor.py
-```
-
-넓은 여백과 섹션형 탐색을 적용한 클린 모니터 버전:
+기존 9패널 구조의 가독성을 높인 클린 모니터 버전:
 
 ```bash
 streamlit run dashboard_monitor_clean.py
+```
+
+지도에서 시설을 선택하고 핵심 성과를 9개 패널로 보는 권장 버전:
+
+```bash
+streamlit run dashboard_monitor_map.py
 ```
 
 대시보드는 `output/five_sites_by_designation/`의 CSV 산출물을 읽습니다.
