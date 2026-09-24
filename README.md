@@ -3,6 +3,34 @@
 2026 한국관광 데이터랩 활용 경진대회 프로젝트입니다. 추천 웰니스 관광지 지정
 전후의 방문, 숙박, 체류, 관광소비 및 지역 내 공간파급 변화를 분석합니다.
 
+## WELL-FLOW 대시보드
+
+5개 지역의 지정 전후 흐름을 요약·지역·원인·비교 화면으로 확인할 수 있습니다.
+
+```bash
+streamlit run dashboard.py
+```
+
+지도에서 시설을 선택하는 버전:
+
+```bash
+streamlit run dashboard_map.py
+```
+
+9개 진단 영역을 한 화면에서 보는 모니터 버전:
+
+```bash
+streamlit run dashboard_monitor.py
+```
+
+넓은 여백과 섹션형 탐색을 적용한 클린 모니터 버전:
+
+```bash
+streamlit run dashboard_monitor_clean.py
+```
+
+대시보드는 `output/five_sites_by_designation/`의 CSV 산출물을 읽습니다.
+
 ## 2024년 선정 3개소 Tier 1 분석
 
 분석 대상은 완도 해양치유센터, 순창 쉴랜드, 완주 아원고택입니다.
