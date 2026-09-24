@@ -377,8 +377,13 @@ def selected_from_map(event: object) -> str | None:
             return None
     if not points:
         return None
-    custom = points[0].get("customdata", [])
-    return custom[0] if custom else None
+    point = points[0] or {}
+    custom = point.get("customdata", []) if isinstance(point, dict) else []
+    if isinstance(custom, dict):
+        return custom.get("지역키") or custom.get("0")
+    if isinstance(custom, (list, tuple)):
+        return custom[0] if custom else None
+    return None
 
 
 def selection_map(selected_key: str) -> go.Figure:
@@ -437,7 +442,7 @@ def selection_map(selected_key: str) -> go.Figure:
         margin=dict(l=0, r=0, t=0, b=0),
         showlegend=False,
         clickmode="event+select",
-        dragmode="select",
+        dragmode=False,
         geo=dict(
             bgcolor="#F8FAFC",
             showland=False,
