@@ -1,8 +1,9 @@
-"""Map-selectable 3x3 WELL-FLOW monitor for five wellness tourism sites."""
+"""Map-selectable 3x3 WELL-FLOW monitor for four wellness tourism sites."""
 
 from __future__ import annotations
 
 from html import escape
+import json
 from pathlib import Path
 
 import numpy as np
@@ -21,12 +22,13 @@ st.set_page_config(
 
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "output" / "five_sites_by_designation"
+BOUNDARY_PATH = ROOT / "assets" / "skorea-provinces-geo.json"
+MUNICIPAL_BOUNDARY_PATH = ROOT / "assets" / "jeolla-municipalities-geo.json"
 PERIODS = ["P1", "P2", "P3", "P4"]
-PERIOD_SHORT = {"P1": "지정 2년 전", "P2": "지정 직전", "P3": "지정 1년차", "P4": "지정 2년차"}
+PERIOD_SHORT = {"P1": "선정 2년 전", "P2": "선정 직전 1년", "P3": "선정 후 1년", "P4": "선정 후 2년"}
 
 SITES = pd.DataFrame(
     [
-        ("전남장성", "장성군", "국립장성숲체원", "북이면", 2020, 126.751410, 35.444047, "방문·소비 회복", "체류·장기숙박 전환"),
         ("전북무주", "무주군", "태권도원 상징지구", "설천면", 2022, 127.762090, 36.012521, "유입 성장, 체류 정체", "숙박일수·장기체류 확대"),
         ("전남완도", "완도군", "완도 해양치유센터", "신지면", 2024, 126.818435, 34.328049, "긴 체류, 소비·계절성 약세", "체험소비·지역 확산"),
         ("전북순창", "순창군", "쉴랜드", "인계면", 2024, 127.131587, 35.431547, "관심 대비 전환 약세", "방문·숙박·소비 전환"),
@@ -56,8 +58,8 @@ METRIC_LABEL = {
     "DSI": "계절 안정성",
 }
 INTERVALS = {
-    "지정 직후 P2→P3": ("P2", "P3", "g23_pct", "delta23_pctp", "지정직후_판정_3pct", "P2→P3"),
-    "2년차 P3→P4": ("P3", "P4", "g34_pct", "delta34_pctp", "2년차_판정_3pct", "P3→P4"),
+    "선정 직전과 첫해 비교": ("g23_pct", "delta23_pctp", "지정직후_판정_3pct"),
+    "첫해와 둘째해 비교": ("g34_pct", "delta34_pctp", "2년차_판정_3pct"),
 }
 STATUS = {
     "UP": ("개선", "#138A72", "↑"),
@@ -67,35 +69,29 @@ STATUS = {
 }
 
 DATA_NEEDS = {
-    "전남장성": [
-        ("1", "시설 직접 이용", "입장·예약·프로그램 이용자 수"),
-        ("2", "북이면 소비", "업종별 카드 매출과 숙박소비"),
-        ("3", "전환 원인", "숙박 가격·예약전환·후기"),
-    ],
     "전북무주": [
         ("1", "시설 직접 이용", "태권도원 방문·예약·체험 인원"),
-        ("2", "설천면 소비", "업종별 카드 매출과 숙박소비"),
+        ("2", "방문 목적", "웰니스 목적 방문 여부와 만족도"),
         ("3", "체류 원인", "당일·연박 목적과 이동 동선"),
     ],
     "전남완도": [
         ("1", "시설 직접 이용", "센터 예약·프로그램·재방문"),
-        ("2", "소비 이동", "신지면 밖 읍면별 업종 소비"),
+        ("2", "이용 전환", "지역 방문 중 센터 실제 이용 여부"),
         ("3", "전환 원인", "체류 중 활동·결제 경로"),
     ],
     "전북순창": [
         ("1", "시설 직접 이용", "검색 이후 예약·실방문 전환"),
-        ("2", "인계면 소비", "세부 업종·시간대별 소비"),
+        ("2", "이용 전환", "지역 방문 중 쉴랜드 실제 이용 여부"),
         ("3", "이탈 원인", "가격·후기·예약 단계 데이터"),
     ],
     "전북완주": [
         ("1", "시설 직접 이용", "아원고택 예약·방문·숙박 구분"),
-        ("2", "소양면 소비", "업종별 카드 매출과 숙박소비"),
+        ("2", "이용 전환", "지역 방문 중 아원고택 실제 이용 여부"),
         ("3", "숙박 원인", "방문객 숙박지·예약·이동 동선"),
     ],
 }
 
 FOCUS_METRIC = {
-    "전남장성": "평균체류시간_분",
     "전북무주": "평균숙박일수",
     "전남완도": "내국인관광소비_천원",
     "전북순창": "내국인관광소비_천원",
@@ -132,6 +128,9 @@ st.markdown(
     .map-selection .location { color:#667382; font-size:.72rem; }
     .map-selection .diagnosis { margin-top:.85rem; padding:.7rem .75rem; border-radius:10px; background:#F3F7FA; color:#536276; font-size:.71rem; line-height:1.55; }
     .map-selection .diagnosis b { color:#172438; }
+    .map-selection .description { margin-top:.65rem; color:#43536A; font-size:.72rem; line-height:1.55; }
+    .map-selection .address { margin-top:.55rem; padding:.55rem .62rem; border-radius:8px; background:#F3F7FA; color:#536276; font-size:.68rem; line-height:1.45; }
+    .map-selection .address b { color:#172438; }
     .map-guide { margin-top:.65rem; color:#667382; font-size:.65rem; }
     div[data-testid="stVerticalBlockBorderWrapper"] { border-color:#DCE4EB; border-radius:14px; background:#FFFFFF; box-shadow:0 1px 2px rgba(16,24,35,.025); }
     div[data-testid="stVerticalBlockBorderWrapper"] > div { padding:.82rem .95rem .9rem; }
@@ -140,7 +139,7 @@ st.markdown(
     .site-head { background:#F5F8FB; border:1px solid #E0E7EE; border-radius:9px; padding:.58rem .7rem; margin-bottom:.65rem; }
     .site-head strong { font-size:.94rem; }
     .site-head span { color:#667382; font-size:.72rem; margin-left:.35rem; }
-    .metric-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:7px; }
+    .metric-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:7px; }
     .metric-mini { text-align:center; border-right:1px solid #E3E9F0; padding:.22rem .12rem; }
     .metric-mini:last-child { border-right:0; }
     .metric-mini b { display:block; color:#101823; font-size:.88rem; white-space:nowrap; margin-top:.05rem; }
@@ -201,6 +200,9 @@ st.markdown(
     .reliability th { background:#F2F5F8; color:#53657B; }
     .reliability td,.reliability th { border-bottom:1px solid #E1E7EE; padding:.25rem .2rem; text-align:left; }
     .measure-note { margin-top:.5rem; padding:.48rem .58rem; background:#F0F6FB; color:#315A82; font-size:.66rem; border-radius:8px; }
+    .detail-button-note { color:#7A8796; font-size:.61rem; margin-top:.35rem; }
+    div[data-testid="stButton"] button { min-height:2.05rem; border:1px solid #D6E1EA; border-radius:8px; background:#F8FAFC; color:#315A82; font-size:.67rem; font-weight:700; }
+    div[data-testid="stButton"] button:hover { border-color:#1287E5; color:#075C99; background:#F1F8FD; }
     .stPlotlyChart { margin:-.2rem 0; }
     [data-testid="stPlotlyChart"] > div { border:0 !important; }
     section[data-testid="stSidebar"] [data-baseweb="select"] > div { min-height:2.55rem; border-color:#D5DFE8; border-radius:9px; font-size:.72rem; }
@@ -217,24 +219,30 @@ def csv(path: Path) -> pd.DataFrame:
 
 
 @st.cache_data
+def jeolla_boundary() -> dict:
+    with BOUNDARY_PATH.open(encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+@st.cache_data
+def jeolla_municipalities() -> dict:
+    with MUNICIPAL_BOUNDARY_PATH.open(encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+@st.cache_data
 def load_data() -> dict[str, pd.DataFrame]:
     files = {
         "kpi": DATA_DIR / "kpi_by_period.csv",
+        "site_catalog": ROOT / "wellness_88_geocoded.csv",
         "growth": DATA_DIR / "growth_bottleneck.csv",
         "monthly": DATA_DIR / "monthly_input.csv",
-        "mobile": DATA_DIR / "spatial_mobility_only.csv",
         "origin": DATA_DIR / "mobility_origin_by_period.csv",
-        "spatial": DATA_DIR / "spatial_concentration_available_sites.csv",
-        "spatial_relative": DATA_DIR / "spatial_relative_growth_available_sites.csv",
-        "market": DATA_DIR / "market_alignment_conditional_available_sites.csv",
-        "market_legacy": DATA_DIR / "market_alignment_legacy_wanju_from_previous_p_extract.csv",
-        "availability": DATA_DIR / "data_availability.csv",
         "periods": DATA_DIR / "period_definitions.csv",
         "its": DATA_DIR / "its_designation_hac3.csv",
         "its_robustness": DATA_DIR / "its_robustness.csv",
         "poi": ROOT / "output" / "geo_tourism_density.csv",
         "nearest": ROOT / "output" / "geo_nearest_lodging.csv",
-        "rooms": ROOT / "output" / "geo_room_capacity.csv",
     }
     return {name: csv(path) for name, path in files.items()}
 
@@ -289,57 +297,6 @@ def level_text(value: float, metric: str) -> str:
     return f"{value:,.0f}"
 
 
-def local_share(region_key: str, period: str) -> tuple[float, str]:
-    mobile = DATA["mobile"].loc[
-        DATA["mobile"]["지역키"].eq(region_key) & DATA["mobile"]["기간"].eq(period)
-    ]
-    if not mobile.empty:
-        return pd.to_numeric(mobile.iloc[0]["시설동_점유율_pct"], errors="coerce"), "이동통신 방문"
-    spatial = DATA["spatial"].loc[
-        DATA["spatial"]["지역키"].eq(region_key)
-        & DATA["spatial"]["기간"].eq(period)
-        & DATA["spatial"]["영역"].eq("방문")
-    ]
-    if not spatial.empty:
-        return pd.to_numeric(spatial.iloc[0]["시설동_점유율_pct"], errors="coerce"), "읍면동 방문"
-    return np.nan, "미확보"
-
-
-def local_change(region_key: str, before: str, after: str) -> float:
-    b, _ = local_share(region_key, before)
-    a, _ = local_share(region_key, after)
-    return a - b if pd.notna(a) and pd.notna(b) else np.nan
-
-
-def local_detail(region_key: str, after_period: str, interval: str) -> tuple[float, float, float, str]:
-    mobile = DATA["mobile"].loc[
-        DATA["mobile"]["지역키"].eq(region_key) & DATA["mobile"]["기간"].eq(after_period)
-    ]
-    if not mobile.empty:
-        row = mobile.iloc[0]
-        return (
-            pd.to_numeric(row["시설동_점유율_pct"], errors="coerce"),
-            pd.to_numeric(row["시설동_점유율변화_pctp"], errors="coerce"),
-            pd.to_numeric(row["상대집중도_RC_pctp"], errors="coerce"),
-            "이동통신 방문",
-        )
-    growth_code = {"P2→P3": "g23", "P3→P4": "g34"}[interval]
-    spatial = DATA["spatial_relative"].loc[
-        DATA["spatial_relative"]["지역키"].eq(region_key)
-        & DATA["spatial_relative"]["영역"].eq("방문")
-        & DATA["spatial_relative"]["변화구간"].eq(growth_code)
-    ]
-    if spatial.empty:
-        return np.nan, np.nan, np.nan, "미확보"
-    row = spatial.iloc[0]
-    return (
-        pd.to_numeric(row["시설동_점유율_after_pct"], errors="coerce"),
-        pd.to_numeric(row["시설동_점유율변화_pctp"], errors="coerce"),
-        pd.to_numeric(row["상대집중도_RC_pctp"], errors="coerce"),
-        "읍면동 방문분포",
-    )
-
-
 def status_class(code: str) -> str:
     return {"UP": "good", "DOWN": "bad", "FLAT": "flat"}.get(code, "muted")
 
@@ -367,7 +324,7 @@ def trend_chart(region_key: str) -> go.Figure:
         index = values / baseline * 100 if pd.notna(baseline) and baseline != 0 else values * np.nan
         fig.add_trace(
             go.Scatter(
-                x=PERIODS, y=index, mode="lines+markers", name=label,
+                x=[PERIOD_SHORT[p] for p in PERIODS], y=index, mode="lines+markers", name=label,
                 line={"color": color, "width": 2}, marker={"size": 5}, connectgaps=False,
                 hovertemplate=f"{label}<br>%{{x}} · %{{y:.1f}}<extra></extra>",
             )
@@ -377,8 +334,8 @@ def trend_chart(region_key: str) -> go.Figure:
         height=165, margin=dict(l=2, r=3, t=5, b=2), showlegend=True,
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="white",
         legend=dict(orientation="h", y=1.02, x=0, font={"size": 8}),
-        xaxis=dict(showgrid=False, title="", categoryorder="array", categoryarray=PERIODS),
-        yaxis=dict(showgrid=True, gridcolor="#E8EDF3", title="P1=100", nticks=4),
+        xaxis=dict(showgrid=False, title="", categoryorder="array", categoryarray=list(PERIOD_SHORT.values())),
+        yaxis=dict(showgrid=True, gridcolor="#E8EDF3", title="선정 2년 전=100", nticks=4),
         font=dict(family="Pretendard", size=9, color="#52647A"),
     )
     return fig
@@ -428,27 +385,210 @@ def selection_map(selected_key: str) -> go.Figure:
     points = SITES.copy()
     points["상태"] = np.where(points["지역키"].eq(selected_key), "선택", "관광지")
     points["마커크기"] = np.where(points["지역키"].eq(selected_key), 22, 14)
-    fig = px.scatter_map(
-        points,
-        lat="위도",
-        lon="경도",
-        hover_name="시설",
-        hover_data={"지역": True, "시설동": True, "선정연도": True, "위도": False, "경도": False, "상태": False, "마커크기": False, "지역키": False},
-        color="상태",
-        size="마커크기",
-        size_max=22,
-        custom_data=["지역키"],
-        color_discrete_map={"선택": "#E45527", "관광지": "#1287E5"},
-        center={"lat": 35.35, "lon": 127.25},
-        zoom=6.35,
-        map_style="carto-positron",
+    municipal = jeolla_municipalities()
+    selected_municipal = {"전북무주": "Muju", "전남완도": "Wando", "전북순창": "Sunchang", "전북완주": "Wanju"}[selected_key]
+    municipal_names = [feature["properties"]["NAME_2"] for feature in municipal["features"]]
+    municipal_values = [1 if name == selected_municipal else 0 for name in municipal_names]
+    municipal_trace = go.Choropleth(
+        geojson=municipal,
+        locations=municipal_names,
+        z=municipal_values,
+        featureidkey="properties.NAME_2",
+        colorscale=[[0, "#D9EAF7"], [0.49, "#D9EAF7"], [0.5, "#71B1DE"], [1, "#2386C5"]],
+        marker_line_color="#FFFFFF",
+        marker_line_width=1.15,
+        marker_opacity=0.88,
+        showscale=False,
+        hoverinfo="skip",
+        name="시군구 경계",
     )
-    fig.update_traces(marker={"opacity": .94}, selected={"marker": {"opacity": 1}}, unselected={"marker": {"opacity": .72}})
-    fig.update_layout(height=285, margin=dict(l=0, r=0, t=0, b=0), showlegend=False, clickmode="event+select")
+    boundary = jeolla_boundary()
+    boundary_names = [feature["properties"]["NAME_1"] for feature in boundary["features"]]
+    province_trace = go.Choropleth(
+        geojson=boundary,
+        locations=boundary_names,
+        z=[1] * len(boundary_names),
+        featureidkey="properties.NAME_1",
+        colorscale=[[0, "rgba(34, 117, 151, 0.01)"], [1, "rgba(34, 117, 151, 0.01)"]],
+        marker_line_color="#227597",
+        marker_line_width=2.5,
+        marker_opacity=0.02,
+        showscale=False,
+        hoverinfo="skip",
+        name="전라도 경계",
+    )
+    scatter_trace = go.Scattergeo(
+        lon=points["경도"],
+        lat=points["위도"],
+        mode="markers+text",
+        text=points["지역"].str.replace("군", "", regex=False),
+        textposition="top center",
+        textfont={"size": 12, "color": "#172438"},
+        customdata=points[["지역키", "시설", "시설동", "선정연도"]],
+        hovertemplate="%{text}<br>%{customdata[1]} · %{customdata[2]}<br>%{customdata[3]}년 선정<extra></extra>",
+        marker={"size": points["마커크기"], "color": points["상태"].map({"선택": "#E45527", "관광지": "#1287E5"}), "line": {"color": "white", "width": 2}, "opacity": .98},
+        selected={"marker": {"opacity": 1}},
+        unselected={"marker": {"opacity": .82}},
+        name="관광지",
+    )
+    fig = go.Figure([municipal_trace, province_trace, scatter_trace])
+    fig.update_layout(
+        height=360,
+        margin=dict(l=0, r=0, t=0, b=0),
+        showlegend=False,
+        clickmode="event+select",
+        dragmode="select",
+        geo=dict(
+            bgcolor="#F8FAFC",
+            showland=False,
+            showcountries=False,
+            showcoastlines=False,
+            showframe=False,
+            projection={"type": "mercator", "scale": 1.18},
+            center={"lat": 35.15, "lon": 127.05},
+            lonaxis={"range": [125.95, 128.20]},
+            lataxis={"range": [33.85, 36.45]},
+        ),
+    )
     return fig
 
 
-if "monitor_map_site" not in st.session_state:
+def metric_monthly(region_key: str, metric: str) -> pd.DataFrame:
+    frame = DATA["monthly"].loc[DATA["monthly"]["지역키"].eq(region_key)].copy()
+    frame["날짜"] = pd.to_datetime(frame["기준년월"].astype(str), format="%Y%m")
+    if metric == "방문자대비관광소비_천원_proxy":
+        frame["값"] = pd.to_numeric(frame["내국인관광소비_천원"], errors="coerce") / pd.to_numeric(frame["외지인방문자수"], errors="coerce")
+    else:
+        frame["값"] = pd.to_numeric(frame[metric], errors="coerce")
+    return frame.sort_values("날짜")
+
+
+def monthly_chart(region_key: str, metric: str) -> go.Figure:
+    frame = metric_monthly(region_key, metric)
+    fig = px.line(frame, x="날짜", y="값", markers=True)
+    fig.update_traces(line={"color": "#1287E5", "width": 2.4}, marker={"size": 4},
+                      hovertemplate="%{x|%Y-%m}<br>%{y:,.2f}<extra></extra>")
+    fig.update_layout(height=330, margin=dict(l=10, r=10, t=10, b=10), showlegend=False,
+                      paper_bgcolor="white", plot_bgcolor="white",
+                      xaxis=dict(title="", showgrid=False, tickformat="%y.%m"),
+                      yaxis=dict(title="", gridcolor="#E8EDF3"))
+    return fig
+
+
+def period_value_table(region_key: str, metrics: list[str]) -> pd.DataFrame:
+    frame = DATA["kpi"].loc[DATA["kpi"]["지역키"].eq(region_key)].set_index("기간").reindex(PERIODS)
+    rows = []
+    for metric in metrics:
+        row = {"지표": METRIC_LABEL.get(metric, metric)}
+        for period in PERIODS:
+            row[PERIOD_SHORT[period]] = level_text(pd.to_numeric(frame.loc[period, metric], errors="coerce"), metric)
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+PANEL_TITLES = {
+    1: "성과 한눈에", 2: "4개 관광지 비교", 3: "전환 흐름", 4: "선정 전후 성장 흐름",
+    5: "방문 유입", 6: "숙박·체류 구조", 7: "병목·구조변화",
+}
+
+
+@st.dialog("상세 분석", width="large")
+def show_panel_detail(panel: int, region_key: str, interval_name: str, display_period: str) -> None:
+    site_row = SITES.loc[SITES["지역키"].eq(region_key)].iloc[0]
+    growth_col, point_col, status_col = INTERVALS[interval_name]
+    st.subheader(f"{panel}. {PANEL_TITLES[panel]}")
+    st.caption(f"{site_row['시설']} · {site_row['지역']} · {interval_name}")
+
+    if panel == 1:
+        fig = trend_chart(region_key)
+        fig.update_layout(height=350)
+        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+        st.dataframe(period_value_table(region_key, [m for _, m in FLOW]), hide_index=True, width="stretch")
+
+    elif panel == 2:
+        metric = st.selectbox("비교 지표", [m for _, m in FLOW], format_func=lambda x: METRIC_LABEL[x], key="detail_compare_metric")
+        rows = []
+        for region in SITES.itertuples():
+            value = change(region.지역키, metric, growth_col, point_col)
+            code = status(region.지역키, metric, status_col)
+            current = DATA["kpi"].loc[(DATA["kpi"]["지역키"].eq(region.지역키)) & (DATA["kpi"]["기간"].eq(display_period)), metric]
+            current_value = pd.to_numeric(current.iloc[0], errors="coerce") if not current.empty else np.nan
+            rows.append({"지역": region.지역, "관광지": region.시설, "현재 수준": level_text(current_value, metric), "변화": value, "판정": STATUS[code][0]})
+        detail = pd.DataFrame(rows)
+        chart = px.bar(detail, x="지역", y="변화", color="판정", text_auto=".1f",
+                       color_discrete_map={"개선": "#138A72", "유지": "#B17817", "하락": "#D9534F", "측정불충분": "#7B8794"})
+        chart.update_layout(height=320, margin=dict(l=10, r=10, t=10, b=10), yaxis_title="%p" if metric.endswith("_pct") else "%", xaxis_title="", legend_title="")
+        st.plotly_chart(chart, width="stretch", config={"displayModeBar": False})
+        detail["변화"] = detail["변화"].map(lambda x: change_text(x, metric))
+        st.dataframe(detail, hide_index=True, width="stretch")
+
+    elif panel == 3:
+        metric = st.selectbox("상세 단계", [m for _, m in FLOW], format_func=lambda x: METRIC_LABEL[x], key="detail_funnel_metric")
+        st.plotly_chart(monthly_chart(region_key, metric), width="stretch", config={"displayModeBar": False})
+        current = DATA["kpi"].loc[(DATA["kpi"]["지역키"].eq(region_key)) & (DATA["kpi"]["기간"].eq(display_period))].iloc[0]
+        rows = []
+        for stage, stage_metric in FLOW:
+            code = status(region_key, stage_metric, status_col)
+            rows.append({"단계": stage, "현재 수준": level_text(pd.to_numeric(current.get(stage_metric), errors="coerce"), stage_metric),
+                         "기간 변화": change_text(change(region_key, stage_metric, growth_col, point_col), stage_metric), "판정": STATUS[code][0]})
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+
+    elif panel == 4:
+        fig = trend_chart(region_key)
+        fig.update_layout(height=380)
+        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+        rows = []
+        for _, metric in FLOW:
+            r = growth_row(region_key, metric)
+            vals = []
+            for gcol, pcol in [("g12_pct", "delta12_pctp"), ("g23_pct", "delta23_pctp"), ("g34_pct", "delta34_pctp")]:
+                value = pd.to_numeric(r.get(pcol if metric.endswith("_pct") else gcol), errors="coerce") if r is not None else np.nan
+                vals.append(change_text(value, metric))
+            rows.append({"지표": METRIC_LABEL[metric], "선정 2년 전→직전": vals[0], "직전→선정 후 1년": vals[1], "선정 후 1년→2년": vals[2]})
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+
+    elif panel == 5:
+        st.plotly_chart(monthly_chart(region_key, "외지인방문자수"), width="stretch", config={"displayModeBar": False})
+        origin = DATA["origin"].loc[(DATA["origin"]["지역키"].eq(region_key)) & (DATA["origin"]["기간"].eq(display_period))].copy()
+        if origin.empty:
+            st.info("이 기간의 출발지역 자료는 아직 확보되지 않았습니다.")
+        else:
+            origin["출발지역"] = origin["거주지(시도)"].astype(str) + " " + origin["거주지(시군구)"].astype(str)
+            origin = origin.nlargest(12, "비율(%)")
+            fig = px.bar(origin.sort_values("비율(%)"), x="비율(%)", y="출발지역", orientation="h", text_auto=".1f")
+            fig.update_traces(marker_color="#327ABD")
+            fig.update_layout(height=350, margin=dict(l=10, r=10, t=10, b=10), xaxis_title="방문자 비중(%)", yaxis_title="")
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+            st.dataframe(origin[["거주지(시도)", "거주지(시군구)", "비율(%)"]], hide_index=True, width="stretch")
+
+    elif panel == 6:
+        quality = ["숙박자비율_pct", "평균숙박일수", "숙박자중_3박이상_pct", "전체순방문자중_3박이상_pct", "DSI"]
+        metric = st.selectbox("상세 지표", quality, format_func=lambda x: METRIC_LABEL[x], key="detail_stay_metric")
+        annual = DATA["kpi"].loc[DATA["kpi"]["지역키"].eq(region_key)].set_index("기간").reindex(PERIODS)
+        fig = px.line(x=[PERIOD_SHORT[p] for p in PERIODS], y=pd.to_numeric(annual[metric], errors="coerce"), markers=True)
+        fig.update_traces(line={"color": "#10A17F", "width": 3}, marker={"size": 8})
+        fig.update_layout(height=320, margin=dict(l=10, r=10, t=10, b=10), xaxis_title="", yaxis_title="")
+        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+        st.dataframe(period_value_table(region_key, quality), hide_index=True, width="stretch")
+
+    elif panel == 7:
+        rows = []
+        for stage, metric in FLOW:
+            immediate, _ = its_evidence(region_key, metric, "즉시수준변화")
+            slope, _ = its_evidence(region_key, metric, "지정후기울기변화")
+            rows.append({"단계": stage, "선정 직후 변화": immediate, "선정 후 흐름": slope,
+                         "기간 판정": STATUS[status(region_key, metric, status_col)][0]})
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+        focus = st.selectbox("월별 확인 지표", [m for _, m in FLOW], format_func=lambda x: METRIC_LABEL[x], key="detail_its_metric")
+        st.plotly_chart(monthly_chart(region_key, focus), width="stretch", config={"displayModeBar": False})
+        st.caption("구조변화 분석은 대조군 없는 탐색 결과이며 선정의 인과효과를 뜻하지 않습니다.")
+
+def detail_button(panel: int, region_key: str, interval_name: str, display_period: str) -> None:
+    if st.button("상세 그래프·표 보기", key=f"panel_detail_{panel}", width="stretch"):
+        show_panel_detail(panel, region_key, interval_name, display_period)
+
+
+if "monitor_map_site" not in st.session_state or st.session_state.monitor_map_site not in set(SITES["지역키"]):
     st.session_state.monitor_map_site = SITES.iloc[0]["지역키"]
 selected_key = st.session_state.monitor_map_site
 site = SITES.loc[SITES["지역키"].eq(selected_key)].iloc[0]
@@ -460,38 +600,47 @@ st.markdown(
     f"""
     <div class="topbar">
       <div class="brand"><strong>WELL-FLOW <span>Monitor</span></strong><span>웰니스 관광지 성과 진단</span></div>
-      <div class="top-meta">{escape(site['지역'])} 분석기간 · {analysis_start}–{analysis_end} · P1–P4</div>
+      <div class="top-meta">{escape(site['지역'])} 분석기간 · {analysis_start}–{analysis_end} · 선정월 기준</div>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
 st.markdown(
-    '<div class="map-head"><div><b>지도에서 관광지 선택</b></div>'
-    '<span>파랑 · 관광지　 주황 · 현재 선택</span></div>',
+    '<div class="map-head"><div><b>전라도 웰니스 관광지 위치</b></div>'
+    '<span>마커 클릭으로 선택　 주황 · 현재 선택</span></div>',
     unsafe_allow_html=True,
 )
-map_col, selected_col = st.columns([2.2, 1], gap="medium")
+map_col, selected_col = st.columns([.82, 1.18], gap="medium")
 with map_col:
-    event = st.plotly_chart(
-        selection_map(selected_key),
-        width="stretch",
-        key="monitor_selection_map",
-        on_select="rerun",
-        selection_mode="points",
-        config={"displayModeBar": False, "scrollZoom": True},
-    )
+    with st.container(border=True):
+        event = st.plotly_chart(
+            selection_map(selected_key),
+            width="stretch",
+            key="monitor_selection_map",
+            on_select="rerun",
+            selection_mode="points",
+            config={"displayModeBar": False, "scrollZoom": False, "doubleClick": False},
+        )
     clicked_key = selected_from_map(event)
     if clicked_key and clicked_key != selected_key:
         st.session_state.monitor_map_site = clicked_key
         st.rerun()
 with selected_col:
     with st.container(border=True):
+        catalog_name = ALIASES.get(site["시설"], site["시설"])
+        catalog_rows = DATA["site_catalog"].loc[DATA["site_catalog"]["시설명"].eq(catalog_name)]
+        catalog = catalog_rows.iloc[0] if not catalog_rows.empty else pd.Series(dtype=object)
+        theme = str(catalog.get("테마", "웰니스 관광지")) if not catalog.empty else "웰니스 관광지"
+        address = catalog.get("tour_api_addr", "주소 정보 없음") if not catalog.empty else "주소 정보 없음"
+        address = str(address) if pd.notna(address) and str(address).strip() else "주소 정보 없음"
         st.markdown(
             f'<div class="map-selection"><div class="place">SELECTED SITE</div><h2>{escape(site["시설"])}</h2>'
             f'<div class="location">{escape(site["지역"])} · {escape(site["시설동"])} · {int(site["선정연도"])}년 지정</div>'
-            f'<div class="diagnosis"><b>분석 가설</b><br>{escape(site["진단"])}<br><br><b>측정 범위</b><br>시설동 방문 · 시군구 전환성과</div>'
-            '<div class="map-guide">성과는 시설 소재 읍면동·시군구 자료를 사용합니다.</div></div>',
+            f'<div class="description">{escape(theme)} 테마의 웰니스 관광지</div>'
+            f'<div class="address"><b>주소</b><br>{escape(address)}</div>'
+            f'<div class="diagnosis"><b>현재 관찰</b><br>{escape(site["진단"])}<br><br><b>분석 단위</b><br>{escape(site["지역"])} 관광시장</div>'
+            '<div class="map-guide">시설 직접 성과는 현재 평가에서 제외하고 추후 과제로 남깁니다.</div></div>',
             unsafe_allow_html=True,
         )
 
@@ -499,15 +648,15 @@ ctl1, ctl2, ctl3 = st.columns([1.1, 1.1, 4])
 with ctl1:
     interval_name = st.selectbox("변화 구간", list(INTERVALS), label_visibility="collapsed")
 with ctl2:
-    display_period = st.selectbox("표시 기간", PERIODS, index=3, format_func=lambda x: f"{x} · {PERIOD_SHORT[x]}", label_visibility="collapsed")
+    display_period = st.selectbox("표시 기간", PERIODS, index=3, format_func=lambda x: PERIOD_SHORT[x], label_visibility="collapsed")
 with ctl3:
     period_caption = " · ".join(
-        f"{period} {month_text(site_periods.loc[period, '시작월'])}–{month_text(site_periods.loc[period, '종료월'])}"
+        f"{PERIOD_SHORT[period]} {month_text(site_periods.loc[period, '시작월'])}–{month_text(site_periods.loc[period, '종료월'])}"
         for period in PERIODS
     )
     st.caption(period_caption)
 
-before, after, growth_col, point_col, status_col, interval_code = INTERVALS[interval_name]
+growth_col, point_col, status_col = INTERVALS[interval_name]
 kpi_site = DATA["kpi"].loc[DATA["kpi"]["지역키"].eq(selected_key)].set_index("기간")
 latest = kpi_site.loc[display_period]
 flow_signals = [
@@ -549,39 +698,30 @@ with c1:
                 f'<div class="metric-mini"><small>{stage}</small><b>{level_text(val, metric)}</b>'
                 f'<em class="{status_class(code)}">{change_text(ch, metric)}</em></div>'
             )
-        ls, _ = local_share(selected_key, display_period)
-        lc = local_change(selected_key, before, after)
-        local_cls = "good" if lc >= 0 else "bad" if pd.notna(lc) else "muted"
-        cards.append(
-            f'<div class="metric-mini"><small>지역파급</small><b>{ls:.1f}%</b>'
-            f'<em class="{local_cls}">{lc:+.1f}%p</em></div>' if pd.notna(ls) and pd.notna(lc)
-            else '<div class="metric-mini"><small>지역파급</small><b>자료 없음</b><em class="muted">측정불충분</em></div>'
-        )
         st.markdown('<div class="metric-grid">' + "".join(cards) + "</div>", unsafe_allow_html=True)
         st.markdown(f'<div class="headline-diagnosis"><b>한 문장 진단</b><br>{escape(diagnosis_text)}</div>', unsafe_allow_html=True)
+        detail_button(1, selected_key, interval_name, display_period)
 
 with c2:
     with st.container(border=True):
-        panel_head(2, "5개 관광지 비교", "같은 상대시점의 병목 방향")
+        panel_head(2, "4개 관광지 비교", "같은 상대시점의 병목 방향")
         compare_rows = []
-        compare_metrics = FLOW[1:]
+        compare_metrics = FLOW
         for region in SITES.itertuples():
             cells = []
             for _, metric in compare_metrics:
                 code = status(region.지역키, metric, status_col)
                 cells.append(f'<td><span class="compare-state" style="color:{STATUS[code][1]}">{STATUS[code][2]}</span></td>')
-            _, delta, _, _ = local_detail(region.지역키, after, interval_code)
-            local_code = "NA" if pd.isna(delta) else "UP" if delta >= 3 else "DOWN" if delta <= -3 else "FLAT"
-            cells.append(f'<td><span class="compare-state" style="color:{STATUS[local_code][1]}">{STATUS[local_code][2]}</span></td>')
             selected_cls = ' class="selected"' if region.지역키 == selected_key else ""
             compare_rows.append(f'<tr{selected_cls}><td>{escape(region.지역.replace("군", ""))}</td>' + "".join(cells) + '</tr>')
         st.markdown(
             '<table class="compare-mini"><thead><tr><th>지역</th>'
             + "".join(f'<th>{stage}</th>' for stage, _ in compare_metrics)
-            + '<th>파급</th></tr></thead><tbody>' + "".join(compare_rows) + '</tbody></table>',
+            + '</tr></thead><tbody>' + "".join(compare_rows) + '</tbody></table>',
             unsafe_allow_html=True,
         )
         st.markdown('<div class="measure-note">↑ 개선　→ 유지　↓ 하락　· 측정불충분</div>', unsafe_allow_html=True)
+        detail_button(2, selected_key, interval_name, display_period)
 
 with c3:
     with st.container(border=True):
@@ -589,15 +729,12 @@ with c3:
         funnel_data = []
         for stage, metric in FLOW:
             funnel_data.append((stage, change(selected_key, metric, growth_col, point_col), metric, status(selected_key, metric, status_col)))
-        lc = local_change(selected_key, before, after)
-        local_code = "NA" if pd.isna(lc) else "UP" if lc >= 3 else "DOWN" if lc <= -3 else "FLAT"
-        funnel_data.append(("지역파급", lc, "local_pct", local_code))
-        widths = [100, 91, 82, 73, 64, 55]
-        colors = ["#DCEBFA", "#CDEBDD", "#FBE8AC", "#E5D9F6", "#FFD5B5", "#D7E6F5"]
+        widths = [100, 90, 80, 70, 60]
+        colors = ["#DCEBFA", "#CDEBDD", "#FBE8AC", "#E5D9F6", "#FFD5B5"]
         rows = []
         comparable = []
         for (stage, val, metric, code), width, color in zip(funnel_data, widths, colors):
-            text = "측정불충분" if pd.isna(val) else (f"{val:+.1f}%p" if metric in {"숙박자비율_pct", "local_pct"} else f"{val:+.1f}%")
+            text = "측정불충분" if pd.isna(val) else (f"{val:+.1f}%p" if metric == "숙박자비율_pct" else f"{val:+.1f}%")
             rows.append(
                 f'<div class="funnel-row" style="width:{width}%;background:{color}"><span>{stage}</span>'
                 f'<strong class="{status_class(code)}">{text}</strong></div>'
@@ -611,12 +748,13 @@ with c3:
             f'<div class="funnel-note">하락 신호 · <b>{escape(bottleneck)}</b><br>±3% 기준 기술적 판정이며 단계 간 수치를 직접 비교하지 않습니다.</div>',
             unsafe_allow_html=True,
         )
+        detail_button(3, selected_key, interval_name, display_period)
 
 # Row 2 ---------------------------------------------------------------------
 c4, c5, c6 = st.columns([1.05, 1.05, 1.15], gap="medium")
 with c4:
     with st.container(border=True):
-        panel_head(4, "g0·g1·g2 성장궤적", "P1=100 전환지표 변화")
+        panel_head(4, "선정 전후 성장 흐름", "선정 2년 전=100 · 단계별 변화")
         st.plotly_chart(trend_chart(selected_key), width="stretch", config={"displayModeBar": False})
         rows = []
         for metric in ["외지인방문자수", "숙박자비율_pct", "평균체류시간_분", "방문자대비관광소비_천원_proxy"]:
@@ -627,44 +765,37 @@ with c4:
                 vals.append(change_text(v, metric))
             rows.append(f'<tr><td>{METRIC_LABEL[metric]}</td><td>{vals[0]}</td><td>{vals[1]}</td><td>{vals[2]}</td></tr>')
         st.markdown(
-            '<table class="mini-table"><thead><tr><th>지표</th><th>g0</th><th>g1</th><th>g2</th></tr></thead><tbody>'
-            + "".join(rows) + '</tbody></table><div class="period-key"><div>g0<br>P1→P2</div><div>g1<br>P2→P3</div><div>g2<br>P3→P4</div><div>점선 없이<br>실측만</div></div>',
+            '<table class="mini-table"><thead><tr><th>지표</th><th>선정 전</th><th>선정 첫해</th><th>선정 둘째해</th></tr></thead><tbody>'
+            + "".join(rows) + '</tbody></table><div class="period-key"><div>2년 전→직전</div><div>직전→첫해</div><div>첫해→둘째해</div><div>실제 관측값</div></div>',
             unsafe_allow_html=True,
         )
+        detail_button(4, selected_key, interval_name, display_period)
 
 with c5:
     with st.container(border=True):
-        panel_head(5, "시설동 파급", "점유율·점유율 변화·시군구 대비 성장")
-        impact_share, impact_delta, impact_rc, impact_source = local_detail(selected_key, after, interval_code)
-
-        def impact_text(value: float, suffix: str, signed: bool = True) -> str:
-            if pd.isna(value):
-                return "측정불충분"
-            return f"{value:+.1f}{suffix}" if signed else f"{value:.1f}{suffix}"
-
+        panel_head(5, "방문 유입", "외지인 방문 규모와 주요 출발지역")
+        visitor_value = pd.to_numeric(latest.get("외지인방문자수"), errors="coerce")
+        visitor_change = change(selected_key, "외지인방문자수", growth_col, point_col)
+        origin = DATA["origin"].loc[(DATA["origin"]["지역키"].eq(selected_key)) & (DATA["origin"]["기간"].eq(display_period))].copy()
         st.markdown(
             '<div class="impact-grid">'
-            f'<div class="impact-card"><small>{escape(site["시설동"])} 방문 비중</small><b>{impact_text(impact_share, "%", False)}</b></div>'
-            f'<div class="impact-card"><small>점유율 변화</small><b>{impact_text(impact_delta, "%p")}</b></div>'
-            f'<div class="impact-card"><small>시군구 대비 성장</small><b>{impact_text(impact_rc, "%p")}</b></div></div>',
+            f'<div class="impact-card"><small>외지인 방문</small><b>{level_text(visitor_value, "외지인방문자수")}</b></div>'
+            f'<div class="impact-card"><small>{escape(interval_name)}</small><b>{change_text(visitor_change, "외지인방문자수")}</b></div>'
+            f'<div class="impact-card"><small>확인된 출발지역</small><b>{origin.shape[0]:,}개</b></div></div>',
             unsafe_allow_html=True,
         )
-        growth_code = {"P2→P3": "g23", "P3→P4": "g34"}[interval_code]
-        spend_spatial = DATA["spatial_relative"].loc[
-            DATA["spatial_relative"]["지역키"].eq(selected_key)
-            & DATA["spatial_relative"]["영역"].eq("소비")
-            & DATA["spatial_relative"]["변화구간"].eq(growth_code)
-        ]
-        if not spend_spatial.empty:
-            spend_row = spend_spatial.iloc[0]
-            spend_note = f"시설동 소비 점유율 {float(spend_row['시설동_점유율변화_pctp']):+.1f}%p · 시군구 대비 소비성장 {float(spend_row['상대집중도_RC_pctp']):+.1f}%p"
+        if origin.empty:
+            st.markdown('<div class="measure-note">이 기간의 출발지역 자료는 측정불충분입니다.</div>', unsafe_allow_html=True)
         else:
-            spend_note = "시설동 소비파급 측정불충분"
-        st.markdown(
-            f'<div class="measure-note">{escape(impact_source)} 기준<br>{escape(spend_note)}</div>',
-            unsafe_allow_html=True,
-        )
-        st.caption("시설동 점유율은 시설 직접 방문율이 아닙니다.")
+            origin["출발지역"] = origin["거주지(시도)"].astype(str) + " " + origin["거주지(시군구)"].astype(str)
+            top_origin = origin.nlargest(3, "비율(%)")
+            origin_rows = []
+            max_share = max(float(top_origin["비율(%)"].max()), 1)
+            for rank, (_, row) in enumerate(top_origin.iterrows(), 1):
+                share = float(row["비율(%)"])
+                origin_rows.append(f'<div class="origin-row"><span class="rank">{rank}</span><div>{escape(str(row["출발지역"]))}<div class="bar-bg"><div class="bar" style="width:{share / max_share * 100:.0f}%"></div></div></div><b>{share:.1f}%</b></div>')
+            st.markdown("".join(origin_rows), unsafe_allow_html=True)
+        detail_button(5, selected_key, interval_name, display_period)
 
 with c6:
     with st.container(border=True):
@@ -691,7 +822,8 @@ with c6:
         st.markdown('<div class="poi-grid">' + "".join(
             f'<div class="poi">{escape(kind)}<b>{int(poi_map.get(kind, 0))}</b></div>' for kind in poi_order[:4]
         ) + '</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="measure-note">계절안정=1−월별 방문 변동계수 · 반경 5km POI · {escape(near_text)}<br>시설동 숙박소비는 측정불충분</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="measure-note">계절안정=1−월별 방문 변동계수 · 반경 5km POI · {escape(near_text)}<br>주변 시설 수는 숙박환경을 설명하는 참고 정보입니다.</div>', unsafe_allow_html=True)
+        detail_button(6, selected_key, interval_name, display_period)
 
 # Row 3 ---------------------------------------------------------------------
 c7, c8, c9 = st.columns([1.05, 1.05, 1.15], gap="medium")
@@ -715,6 +847,7 @@ with c7:
             unsafe_allow_html=True,
         )
         st.markdown('<div class="measure-note">±3%는 방향 판정, ITS는 구조변화 탐색입니다. 대조군이 없어 지정의 인과효과로 해석하지 않습니다.</div>', unsafe_allow_html=True)
+        detail_button(7, selected_key, interval_name, display_period)
 
 with c8:
     with st.container(border=True):
@@ -725,23 +858,18 @@ with c8:
                 f'<div class="policy-row"><span class="policy-num">{number}</span><strong>{escape(title)}</strong><span>{escape(reason)}</span></div>'
             )
         st.markdown("".join(html), unsafe_allow_html=True)
-        st.markdown('<div class="measure-note">추가 자료 확보 전에는 원인과 지원방향을 확정하지 않습니다.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="measure-note">추가 자료 확보 전에는 변화의 원인을 확정하지 않습니다.</div>', unsafe_allow_html=True)
 
 with c9:
     with st.container(border=True):
         panel_head(9, "데이터 신뢰도", "공간단위와 확보 수준")
         has_origin = not DATA["origin"].loc[DATA["origin"]["지역키"].eq(selected_key)].empty
-        has_spatial_spend = selected_key in {"전남완도", "전북순창"}
-        jangseong_lodging_limit = selected_key == "전남장성"
         reliability = [
-            ("시설 직접 성과", "시설", "측정불충분", "missing"),
+            ("시설 직접 성과", "시설", "추후 과제", "partial"),
             ("관심·방문", "시군구", "확보", "ok"),
-            ("숙박전환·장기체류", "시군구", "부분확보" if jangseong_lodging_limit else "확보", "partial" if jangseong_lodging_limit else "ok"),
+            ("숙박전환·장기체류", "시군구", "확보", "ok"),
             ("방문당 소비·DSI", "시군구", "확보", "ok"),
-            ("시설동 방문파급", "읍면동", "확보", "ok"),
-            ("소비 공간파급", "시설동", "확보" if has_spatial_spend else "측정불충분", "ok" if has_spatial_spend else "missing"),
-            ("출발지역", "시군구", "확보" if has_origin else "측정불충분", "ok" if has_origin else "missing"),
-            ("WSPI·비교시장", "독립 benchmark", "측정불충분", "missing"),
+            ("방문 출발지역", "시군구", "확보" if has_origin else "측정불충분", "ok" if has_origin else "missing"),
             ("ITS", "시군구 월별", "탐색근거", "partial"),
         ]
         table_rows = "".join(
@@ -750,8 +878,8 @@ with c9:
         )
         st.markdown(
             '<table class="reliability"><thead><tr><th>지표</th><th>공간단위</th><th>확보 수준</th></tr></thead><tbody>'
-            + table_rows + '</tbody></table><div class="measure-note"><b>측정불충분도 분석 결과입니다.</b> 없는 자료를 낮은 성과로 처리하지 않습니다.</div>',
+            + table_rows + '</tbody></table><div class="measure-note"><b>시설 직접 성과는 추후 과제입니다.</b> 현재 시군구 관광시장 자료만으로 지역 흐름을 평가합니다.</div>',
             unsafe_allow_html=True,
         )
 
-st.caption("WELL-FLOW · 지정연도 기준 연간 구간(P1–P4) · 시설 성과로 직접 해석할 때는 공간단위를 반드시 확인하세요.")
+st.caption("WELL-FLOW · 관광지 선정월 기준 네 개 연간 구간 · 시설 직접 성과는 추후 과제로 남깁니다.")

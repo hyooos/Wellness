@@ -77,7 +77,6 @@ STATUS_COLOR = {"UP": "#0F766E", "FLAT": "#A16207", "DOWN": "#B64646", "NA": "#8
 STATUS_SCORE = {"DOWN": -1, "FLAT": 0, "UP": 1, "NA": np.nan}
 
 POLICY_FOCUS = {
-    "전남장성": ("방문·소비 회복", "체류·장기숙박 전환"),
     "전북무주": ("유입 성장, 체류 정체", "숙박일수·장기체류 확대"),
     "전남완도": ("긴 체류, 소비·계절성 약세", "체험소비·지역 확산"),
     "전북순창": ("관심 대비 전환 약세", "방문·숙박·소비 전환"),
@@ -160,8 +159,9 @@ def load_data() -> dict[str, pd.DataFrame]:
 DATA = load_data()
 GROWTH = DATA["growth_bottleneck"]
 KPI = DATA["kpi_by_period"]
+INCLUDED_REGION_KEYS = ["전북무주", "전남완도", "전북순창", "전북완주"]
 REGIONS = (
-    KPI[["지역키", "지역", "시설", "최초선정연도"]]
+    KPI.loc[KPI["지역키"].isin(INCLUDED_REGION_KEYS), ["지역키", "지역", "시설", "최초선정연도"]]
     .drop_duplicates()
     .sort_values(["최초선정연도", "지역"])
     .reset_index(drop=True)
@@ -399,7 +399,7 @@ def its_card(region_key: str, metric: str, kind: str) -> None:
 
 
 def region_cards(interval: dict[str, str]) -> None:
-    columns = st.columns(5)
+    columns = st.columns(len(REGION_KEYS))
     for column, region_key in zip(columns, REGION_KEYS):
         meta = region_meta(region_key)
         rows = []
@@ -430,7 +430,7 @@ def coverage_badge(region_key: str, item: str) -> str:
 st.markdown(
     """<section class="hero"><div class="hero-kicker">WELL-FLOW</div>
     <h1>웰니스 관광 성과</h1>
-    <p>5개 지역의 지정 전후 흐름</p></section>""",
+    <p>4개 지역의 지정 전후 흐름</p></section>""",
     unsafe_allow_html=True,
 )
 
@@ -735,7 +735,7 @@ with why_tab:
         st.caption("증감 폭 상위 업종")
 
 with compare_tab:
-    st.markdown("## 5개 지역 비교")
+    st.markdown("## 4개 지역 비교")
     st.caption("각 지역의 지정 전후 방향 비교")
     st.plotly_chart(
         heatmap_figure(interval),

@@ -1,26 +1,27 @@
 # visitkoreadatalab
 
-2026 한국관광 데이터랩 활용 경진대회 프로젝트입니다. 추천 웰니스 관광지 지정
-전후의 방문, 숙박, 체류, 관광소비 및 지역 내 공간파급 변화를 분석합니다.
+2026 한국관광 데이터랩 활용 경진대회 프로젝트입니다. 추천 웰니스 관광지로 선정된
+시군구가 관심을 실제 방문, 숙박, 체류, 관광소비로 이어가는지 분석합니다.
 
 ## WELL-FLOW 대시보드
 
-5개 지역의 지정 전후 흐름을 요약·지역·원인·비교 화면으로 확인할 수 있습니다.
+장성을 제외한 4개 지역의 선정 전후 흐름을 한눈에 보고, 관심·방문·숙박·체류·소비 단계를 눌러
+세부 변화를 확인할 수 있습니다.
 
 ```bash
-streamlit run dashboard.py
+streamlit run v1.dashboard.py
 ```
 
 기존 9패널 구조의 가독성을 높인 클린 모니터 버전:
 
 ```bash
-streamlit run dashboard_monitor_clean.py
+streamlit run v2.dashboard_monitor_clean.py
 ```
 
-지도에서 시설을 선택하고 핵심 성과를 9개 패널로 보는 권장 버전:
+지도에서 지역을 선택하고 9개 진단 패널과 패널별 상세 그래프·표를 보는 권장 버전:
 
 ```bash
-streamlit run dashboard_monitor_map.py
+streamlit run v3.dashboard_monitor_map.py
 ```
 
 대시보드는 `output/five_sites_by_designation/`의 CSV 산출물을 읽습니다.
