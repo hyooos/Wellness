@@ -275,8 +275,8 @@ td small { display: block; margin-top: 2px; color: var(--muted); font-size: .65r
 .matrix-tooltip { visibility: hidden; position: absolute; z-index: 130; top: calc(100% + 8px); left: 50%; width: 255px; padding: 12px 13px; border-radius: 12px; color: #eaf2ed; background: #14261e; box-shadow: 0 14px 32px rgba(10,31,22,.28); opacity: 0; transform: translateX(-50%) translateY(-3px); transition: opacity .12s ease, transform .12s ease; pointer-events: none; text-align: left; }
 .matrix-tooltip::before { content: ""; position: absolute; top: -6px; left: 50%; width: 12px; height: 12px; background: #14261e; transform: translateX(-50%) rotate(45deg); }
 .signal:hover .matrix-tooltip, .signal:focus-visible .matrix-tooltip { visibility: visible; opacity: 1; transform: translateX(-50%) translateY(0); }
-.matrix-tooltip p { margin: 7px 0 0; color: #b8c8bf; font-size: .69rem; line-height: 1.4; }
-.matrix-tooltip p b { display: inline; color: #fff; font-size: inherit; }
+.matrix-tooltip p { margin: 8px 0 0; color: #fff; font-size: .7rem; line-height: 1.45; }
+.signal .matrix-tooltip p b { display: inline; color: #fff; font-size: inherit; }
 .signal:nth-child(2) .matrix-tooltip { left: 0; transform: translateY(-3px); }
 .signal:nth-child(2):hover .matrix-tooltip, .signal:nth-child(2):focus-visible .matrix-tooltip { transform: translateY(0); }
 .signal:nth-child(2) .matrix-tooltip::before { left: 28px; }
@@ -291,6 +291,14 @@ td small { display: block; margin-top: 2px; color: var(--muted); font-size: .65r
 .tabs button.active { color: #fff; background: var(--leaf); }
 .tab-help { margin: 14px 0 3px; color: var(--muted); font-size: .76rem; }
 .chart-box { width: 100%; margin-top: 7px; }
+.chart-tooltip { min-width: 270px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 11px; background: rgba(255,255,255,.97); box-shadow: 0 10px 28px rgba(31,67,51,.14); }
+.chart-tooltip > b { display: block; margin-bottom: 7px; color: var(--ink); font-size: .76rem; }
+.chart-tooltip > div { display: grid; grid-template-columns: 8px 42px 72px 1fr; align-items: center; gap: 7px; padding: 4px 0; font-size: .68rem; }
+.chart-tooltip i { width: 7px; height: 7px; border-radius: 50%; }
+.chart-tooltip span { color: var(--ink-2); font-weight: 750; }
+.chart-tooltip strong { color: var(--muted); font-weight: 650; }
+.chart-tooltip em { color: var(--ink); font-style: normal; font-weight: 760; text-align: right; white-space: nowrap; }
+.chart-tooltip > small { display: block; margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--line); color: var(--muted); font-size: .61rem; }
 .metric-select { display: flex; align-items: center; gap: 9px; width: fit-content; margin-top: 15px; }
 .metric-select label { color: var(--muted); font-size: .74rem; font-weight: 720; }
 .metric-select select { min-width: 180px; padding: 8px 31px 8px 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: white; outline-color: var(--leaf); }
