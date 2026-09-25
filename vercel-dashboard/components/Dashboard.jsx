@@ -84,6 +84,17 @@ function itsEffectText(row, metric, effect) {
   return `${beta > 0 ? "+" : ""}${Number(beta).toFixed(3)}${suffix}`;
 }
 
+function plainItsResult(row, metric, effect, strength) {
+  const immediate = effect === "즉시수준변화";
+  if (!row || strength === "신호 없음") return { text: `${immediate ? "지정 직후" : "이후 흐름"} · 뚜렷한 변화 없음`, strength: "" };
+  const beta = immediate ? row.즉시수준변화_beta : row.지정후_기울기변화_beta;
+  const direction = immediate
+    ? (beta >= 0 ? "지정 직후 상승" : "지정 직후 하락")
+    : (beta >= 0 ? "이후 흐름 개선" : "이후 흐름 둔화");
+  const easyStrength = strength === "강함" ? "뚜렷함" : strength === "중간" ? "반복 확인" : "일부 신호";
+  return { text: `${direction} · ${itsEffectText(row, metric, effect)}`, strength: easyStrength };
+}
+
 function SectionTitle({ number, title, subtitle }) {
   return <div className="section-title"><span>{number}</span><div><h2>{title}</h2><p>{subtitle}</p></div></div>;
 }
@@ -154,7 +165,9 @@ function StageTooltip({ data, selected, stage, metric, description, source }) {
   const its = data.its.find(r => r.지역키 === selected && r.지표 === metric);
   const levelStrength = itsStrength(data, selected, metric, "즉시수준변화");
   const slopeStrength = itsStrength(data, selected, metric, "지정후기울기변화");
-  return <div className="stage-tooltip" id={`stage-tip-${metric}`} role="tooltip"><div className="tooltip-title">{stage} · {description}<span>{source}</span></div><table><tbody>{PERIODS.map(period => <tr key={period}><td>{PERIOD_LABEL[period]}</td><td>{formatLevel(data.kpi.find(r => r.지역키 === selected && r.기간 === period)?.[metric], metric)}</td></tr>)}</tbody></table>{its ? <><div className="tooltip-subtitle">지정 시점 통계 근거</div><table><tbody><tr><td>지정 시점 계단</td><td>{itsEffectText(its, metric, "즉시수준변화")} · <span className={`tooltip-strength ${strengthClass(levelStrength)}`}>{levelStrength}</span></td></tr><tr><td>지정 후 속도</td><td>{itsEffectText(its, metric, "지정후기울기변화")} · <span className={`tooltip-strength ${strengthClass(slopeStrength)}`}>{slopeStrength}</span></td></tr><tr><td>보정 유의확률</td><td>q {finite(its.즉시수준변화_q_BH) ? Number(its.즉시수준변화_q_BH).toFixed(3) : "–"}</td></tr></tbody></table></> : <div className="tooltip-empty">이 지표는 지정 시점 분석 대상이 아닙니다.</div>}<div className="tooltip-note">방향은 ±3% 기준 · 확인 강도는 시작월과 보정 조건 8가지 기준</div></div>;
+  const levelResult = plainItsResult(its, metric, "즉시수준변화", levelStrength);
+  const slopeResult = plainItsResult(its, metric, "지정후기울기변화", slopeStrength);
+  return <div className="stage-tooltip" id={`stage-tip-${metric}`} role="tooltip"><div className="tooltip-title">{stage} · {description}<span>{source}</span></div><table><tbody>{PERIODS.map(period => <tr key={period}><td>{PERIOD_LABEL[period]}</td><td>{formatLevel(data.kpi.find(r => r.지역키 === selected && r.기간 === period)?.[metric], metric)}</td></tr>)}</tbody></table>{its ? <><div className="tooltip-subtitle">월별 흐름 확인</div><div className="plain-results"><p><span>{levelResult.text}</span>{levelResult.strength && <b>{levelResult.strength}</b>}</p><p><span>{slopeResult.text}</span>{slopeResult.strength && <b>{slopeResult.strength}</b>}</p></div></> : <><div className="tooltip-subtitle">월별 흐름 확인</div><div className="tooltip-empty">같은 지표의 월별 검정 없음<br />총소비 흐름은 상세 탭에서 확인</div></>}<div className="tooltip-note">상세 통계는 ‘지정 시점 확인’ 탭에서 볼 수 있습니다.</div></div>;
 }
 
 function BottleneckEvidence({ data, selected, intervalKey }) {

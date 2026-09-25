@@ -170,6 +170,9 @@ main { width: min(1480px, calc(100% - 40px)); margin: 0 auto; padding: 22px 0 42
 .stage-tooltip td { padding: 4px 1px; border-bottom: 1px solid rgba(255,255,255,.09); text-align: left; }
 .stage-tooltip td:last-child { color: #fff; font-weight: 700; text-align: right; }
 .tooltip-subtitle { margin-top: 10px; color: #b9dfc8; font-size: .7rem; font-weight: 800; }
+.plain-results { margin-top: 5px; }
+.plain-results p { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,.09); color: #fff; font-size: .69rem; }
+.plain-results p b { flex: 0 0 auto; padding: 2px 6px; border-radius: 999px; color: #d8eee1; background: rgba(93,174,126,.2); font-size: .6rem; }
 .tooltip-strength { padding: 2px 5px; border-radius: 999px; font-size: .62rem; }
 .tooltip-strength.strong { background: #5dae7e; color: #fff; }
 .tooltip-strength.medium { background: #5e8474; color: #fff; }
