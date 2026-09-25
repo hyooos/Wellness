@@ -86,11 +86,12 @@ function itsEffectText(row, metric, effect) {
 
 function plainItsResult(row, metric, effect, strength) {
   const immediate = effect === "즉시수준변화";
-  if (!row || strength === "신호 없음") return { text: `${immediate ? "지정 직후" : "이후 흐름"} · 뚜렷한 변화 없음`, strength: "" };
+  if (!row) return { text: "자료 없음", strength: "" };
+  if (strength === "신호 없음") return { text: `${immediate ? "지정 직후" : "지정 이후 흐름"} · ${itsEffectText(row, metric, effect)}`, strength: "뚜렷하지 않음" };
   const beta = immediate ? row.즉시수준변화_beta : row.지정후_기울기변화_beta;
   const direction = immediate
     ? (beta >= 0 ? "지정 직후 상승" : "지정 직후 하락")
-    : (beta >= 0 ? "이후 흐름 개선" : "이후 흐름 둔화");
+    : (beta >= 0 ? "지정 이후 흐름 개선" : "지정 이후 흐름 둔화");
   const easyStrength = strength === "강함" ? "뚜렷함" : strength === "중간" ? "반복 확인" : "일부 신호";
   return { text: `${direction} · ${itsEffectText(row, metric, effect)}`, strength: easyStrength };
 }
