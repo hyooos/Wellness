@@ -22,6 +22,7 @@ const LABEL = {
   전체순방문자중_3박이상_pct: "장기체류 비율", DSI: "사계절 수요",
 };
 const TABLE_METRICS = ["숙박검색건수", "외지인방문자수", "숙박자비율_pct", "평균체류시간_분", "평균숙박일수", "내국인관광소비_천원", "방문자대비관광소비_천원_proxy", "숙박자중_3박이상_pct", "전체순방문자중_3박이상_pct", "DSI"];
+const LOG_METRICS = new Set(["숙박검색건수", "외지인방문자수", "내국인관광소비_천원"]);
 const STATUS = { UP: ["오름", "↑", "up"], FLAT: ["유지", "→", "flat"], DOWN: ["내림", "↓", "down"], NA: ["자료 없음", "·", "na"] };
 const INTERVALS = {
   immediate: { label: "지정 직후", before: "P2", after: "P3", growth: "g23_pct", point: "delta23_pctp", status: "지정직후_판정_3pct" },
@@ -60,6 +61,34 @@ function itsStrength(data, selected, metric, effect = "즉시수준변화") {
   if (n >= 6) return "중간";
   if (finite(p) && p < .1) return "약함";
   return "신호 없음";
+}
+
+function robustnessCount(data, selected, metric, effect) {
+  return data.robustness.filter(r => r.지역키 === selected && r.지표 === metric && r.계수 === effect).reduce((sum, r) => sum + (Number(r.p05_유의_lag수) || 0), 0);
+}
+
+function periodChange(row, metric, interval) {
+  if (!row) return null;
+  return row[metric.endsWith("_pct") ? `delta${interval}_pctp` : `g${interval}_pct`];
+}
+function changeClass(value) {
+  if (!finite(value)) return "na";
+  if (value > 3) return "up";
+  if (value < -3) return "down";
+  return "flat";
+}
+
+function itsEffectText(row, metric, effect) {
+  const immediate = effect === "즉시수준변화";
+  const beta = immediate ? row?.즉시수준변화_beta : row?.지정후_기울기변화_beta;
+  const converted = immediate ? row?.즉시변화_환산_pct : row?.기울기변화_월환산_pct;
+  if (!finite(beta)) return "자료 없음";
+  const suffix = immediate ? "" : "/월";
+  if (LOG_METRICS.has(metric)) return `${converted > 0 ? "+" : ""}${Number(converted).toFixed(1)}%${suffix}`;
+  if (metric.endsWith("_pct")) return `${beta > 0 ? "+" : ""}${Number(beta).toFixed(2)}%p${suffix}`;
+  if (metric === "평균체류시간_분") return `${beta > 0 ? "+" : ""}${Number(beta).toFixed(1)}분${suffix}`;
+  if (metric === "평균숙박일수") return `${beta > 0 ? "+" : ""}${Number(beta).toFixed(3)}일${suffix}`;
+  return `${beta > 0 ? "+" : ""}${Number(beta).toFixed(3)}${suffix}`;
 }
 
 function SectionTitle({ number, title, subtitle }) {
@@ -117,14 +146,22 @@ function StageFlow({ data, selected, intervalKey }) {
       const before = data.kpi.find(r => r.지역키 === selected && r.기간 === interval.before)?.[metric];
       const after = data.kpi.find(r => r.지역키 === selected && r.기간 === interval.after)?.[metric];
       return <div className={`stage-wrap ${isBottleneck ? "bottleneck-wrap" : ""}`} key={stage}>
-        <div className={`stage-card ${cls} ${isBottleneck ? "bottleneck" : ""}`}>
+        <div className={`stage-card ${cls} ${isBottleneck ? "bottleneck" : ""}`} tabIndex={0} aria-describedby={`stage-tip-${metric}`}>
           {isBottleneck && <div className="bneck-band">핵심 병목</div>}
           <div className="stage-top"><span>{stage}</span><em>{source}</em></div><div className="stage-change-row"><strong>{arrow} {formatChange(change, metric)}</strong><span className={`status-chip ${cls}`}>{label}</span></div>
           <small>{description}</small><div className="stage-values">{formatLevel(before, metric)} → {formatLevel(after, metric)}</div>
+          <StageTooltip data={data} selected={selected} stage={stage} metric={metric} description={description} source={source} />
         </div>{i < STAGES.length - 1 && <span className="stage-arrow">›</span>}
       </div>;
     })}
   </div>;
+}
+
+function StageTooltip({ data, selected, stage, metric, description, source }) {
+  const its = data.its.find(r => r.지역키 === selected && r.지표 === metric);
+  const levelStrength = itsStrength(data, selected, metric, "즉시수준변화");
+  const slopeStrength = itsStrength(data, selected, metric, "지정후기울기변화");
+  return <div className="stage-tooltip" id={`stage-tip-${metric}`} role="tooltip"><div className="tooltip-title">{stage} · {description}<span>{source}</span></div><table><tbody>{PERIODS.map(period => <tr key={period}><td>{PERIOD_LABEL[period]}</td><td>{formatLevel(data.kpi.find(r => r.지역키 === selected && r.기간 === period)?.[metric], metric)}</td></tr>)}</tbody></table>{its ? <><div className="tooltip-subtitle">지정 시점 통계 근거</div><table><tbody><tr><td>지정 시점 계단</td><td>{itsEffectText(its, metric, "즉시수준변화")} · <span className={`tooltip-strength ${strengthClass(levelStrength)}`}>{levelStrength}</span></td></tr><tr><td>지정 후 속도</td><td>{itsEffectText(its, metric, "지정후기울기변화")} · <span className={`tooltip-strength ${strengthClass(slopeStrength)}`}>{slopeStrength}</span></td></tr><tr><td>보정 유의확률</td><td>q {finite(its.즉시수준변화_q_BH) ? Number(its.즉시수준변화_q_BH).toFixed(3) : "–"}</td></tr></tbody></table></> : <div className="tooltip-empty">이 지표는 지정 시점 분석 대상이 아닙니다.</div>}<div className="tooltip-note">방향은 ±3% 기준 · 확인 강도는 시작월과 보정 조건 8가지 기준</div></div>;
 }
 
 function BottleneckEvidence({ data, selected, intervalKey }) {
@@ -151,7 +188,16 @@ function CheckPanel({ data, selected }) {
   const position = v => Math.max(0, Math.min(100, (v - lo) / (hi - lo) * 100));
   const recovered = current >= target * .97;
   const gap = metric.endsWith("_pct") ? `${current - target >= 0 ? "+" : ""}${(current - target).toFixed(2)}%p` : `${current / target - 1 >= 0 ? "+" : ""}${((current / target - 1) * 100).toFixed(1)}%`;
-  return <div className="panel check"><span className="eyebrow">다음 점검 지표</span><div className="check-box"><div className="check-row"><h3>{LABEL[metric]}</h3><span className={`check-state ${recovered ? "recovered" : "pending"}`}>{recovered ? "회복" : "아직 미회복"}</span></div><p>목표: 지정 직전 수준 회복 · 지금 목표 대비 <b className={recovered ? "positive" : "negative"}>{gap}</b></p><div className="bar-track"><i className={recovered ? "recovered" : "pending"} style={{ width: `${position(current)}%` }} /><b style={{ left: `${position(target)}%` }} /></div><div className="bar-labels"><span>지금(2년차) <b>{formatLevel(current, metric)}</b></span><span>목표(지정 직전) <b>{formatLevel(target, metric)}</b></span></div></div><h4 className="check-order">점검 순서</h4><div className="steps">{site.actions.map(([when, what], i) => <div className={`step ${i === 0 ? "now" : ""}`} key={when}><span>{i + 1}</span><p><small>{when}</small><b>{what}</b></p></div>)}</div></div>;
+  return <div className="panel check"><span className="eyebrow">다음 점검 지표</span><div className="check-box" tabIndex={0}><div className="check-row"><h3>{LABEL[metric]}</h3><span className={`check-state ${recovered ? "recovered" : "pending"}`}>{recovered ? "회복" : "아직 미회복"}</span></div><p>목표: 지정 직전 수준 회복 · 지금 목표 대비 <b className={recovered ? "positive" : "negative"}>{gap}</b></p><div className="bar-track"><i className={recovered ? "recovered" : "pending"} style={{ width: `${position(current)}%` }} /><b style={{ left: `${position(target)}%` }} /></div><div className="bar-labels"><span>지금(2년차) <b>{formatLevel(current, metric)}</b></span><span>목표(지정 직전) <b>{formatLevel(target, metric)}</b></span></div><div className="check-tooltip" role="tooltip"><div className="tooltip-title">{LABEL[metric]} · 네 구간</div><table><tbody>{PERIODS.map(period => <tr key={period}><td>{PERIOD_LABEL[period]}</td><td>{formatLevel(value(period), metric)}</td></tr>)}</tbody></table><div className="tooltip-note">검은 세로선이 목표인 지정 직전 값입니다.</div></div></div><h4 className="check-order">점검 순서</h4><div className="steps">{site.actions.map(([when, what], i) => <div className={`step ${i === 0 ? "now" : ""}`} key={when}><span>{i + 1}</span><p><small>{when}</small><b>{what}</b></p></div>)}</div></div>;
+}
+
+function MatrixTooltip({ data, regionKey, stage, metric, intervalKey, bottleneck }) {
+  const interval = INTERVALS[intervalKey];
+  const before = data.kpi.find(r => r.지역키 === regionKey && r.기간 === interval.before)?.[metric];
+  const after = data.kpi.find(r => r.지역키 === regionKey && r.기간 === interval.after)?.[metric];
+  const code = data.growth.find(r => r.지역키 === regionKey && r.지표 === metric)?.[interval.status] || "NA";
+  const strength = itsStrength(data, regionKey, metric);
+  return <div className="matrix-tooltip" role="tooltip"><div className="tooltip-title">{data.sites[regionKey].region} · {stage}{bottleneck ? " · 핵심 병목" : ""}</div><p>{LABEL[metric]}: <b>{formatLevel(before, metric)} → {formatLevel(after, metric)}</b></p><p>방향 판정: <b>{STATUS[code]?.[0] || "자료 없음"}</b></p><p>지정 시점 확인: <span className={`tooltip-strength ${strengthClass(strength)}`}>{strength}</span></p></div>;
 }
 
 function DataQuality({ data, selected }) {
@@ -185,6 +231,15 @@ function FlowChart({ data, selected }) {
     <Tooltip formatter={(v) => `${Number(v).toFixed(1)}`} contentStyle={{ borderColor: "#dce7e0", borderRadius: 10, boxShadow: "0 8px 22px rgba(31,67,51,.1)" }} /><Legend iconType="circle" />
     {STAGES.map(([stage]) => { const bottleneck = data.sites[selected].bottleneck.includes(stage); return <Line key={stage} type="monotone" dataKey={stage} stroke={bottleneck ? "#d2513a" : COLORS[stage]} strokeWidth={bottleneck ? 4.5 : 2.2} strokeOpacity={bottleneck ? 1 : .78} dot={{ r: bottleneck ? 5 : 3.5, fill: bottleneck ? "#d2513a" : COLORS[stage], strokeWidth: 0 }} activeDot={{ r: 6 }} />; })}
   </LineChart></ResponsiveContainer></div>;
+}
+
+function FlowDetails({ data, selected }) {
+  const site = data.sites[selected];
+  return <div className="flow-details">{STAGES.map(([stage, metric]) => {
+    const row = data.growth.find(r => r.지역키 === selected && r.지표 === metric);
+    const bottleneck = site.bottleneck.includes(stage);
+    return <div key={stage} className={`flow-detail-card ${bottleneck ? "bottleneck" : ""}`}><div><span>{stage}</span>{bottleneck && <em>핵심 병목</em>}</div><b>{formatLevel(data.kpi.find(r => r.지역키 === selected && r.기간 === "P4")?.[metric], metric)}</b><small>지정 전 {formatChange(periodChange(row, metric, "12"), metric)}</small><small>지정 직후 {formatChange(periodChange(row, metric, "23"), metric)}</small><small>2년차 {formatChange(periodChange(row, metric, "34"), metric)}</small></div>;
+  })}</div>;
 }
 
 function DesignationLabel({ viewBox }) {
@@ -221,6 +276,10 @@ export default function Dashboard() {
     return { stage, metric: m, y1: row?.g23_pct, y2: kpi("P2", m) && kpi("P4", m) ? (kpi("P4", m) / kpi("P2", m) - 1) * 100 : null, isDown: row?.지정직후_판정_3pct === "DOWN" };
   }).filter(r => r.isDown && finite(r.y1));
   const its = data.its.find(r => r.지역키 === selected && r.지표 === metric);
+  const levelStrength = itsStrength(data, selected, metric, "즉시수준변화");
+  const slopeStrength = itsStrength(data, selected, metric, "지정후기울기변화");
+  const levelRobustness = robustnessCount(data, selected, metric, "즉시수준변화");
+  const slopeRobustness = robustnessCount(data, selected, metric, "지정후기울기변화");
   const tabs = [["flow", "흐름 추이"], ["its", "지정 시점 확인"], ["wellness", "웰니스 지표"], ["market", "방문 출발지·주변 환경"], ["table", "기간별 수치 비교"], ["quality", "데이터 신뢰도"]];
 
   return <main>
@@ -235,7 +294,7 @@ export default function Dashboard() {
       </div>
     </section>
 
-    <SectionTitle number="1" title="병목 진단" subtitle="지정 전후 다섯 단계의 변화와 핵심 병목을 한눈에 확인합니다" />
+    <SectionTitle number="1" title="병목 진단" subtitle="지정 전후 다섯 단계의 변화 · 카드에 마우스를 올리면 네 구간 값과 통계 근거를 볼 수 있습니다" />
     <section className="panel diagnosis-panel"><div className="diagnosis-head"><div><span className="eyebrow">비교 구간</span><div className="segmented"><button className={intervalKey === "immediate" ? "active" : ""} onClick={() => setIntervalKey("immediate")}>지정 직후</button><button className={intervalKey === "second" ? "active" : ""} onClick={() => setIntervalKey("second")}>2년차</button></div></div></div><div className="flow-banner"><p>핵심 병목은 <em>{site.bottleneckLabel}</em>입니다.</p><div className="stage-legend"><span><i className="up" />오름 (+3% 초과)</span><span><i className="flat" />유지</span><span><i className="down" />내림 (−3% 미만)</span><span><i className="na" />자료 없음</span><span><i className="bottleneck" />핵심 병목</span></div></div><StageFlow data={data} selected={selected} intervalKey={intervalKey} /><details><summary>핵심 병목 근거 자세히 보기</summary><BottleneckEvidence data={data} selected={selected} intervalKey={intervalKey} /></details></section>
 
     <SectionTitle number="2" title="대응 방향" subtitle="핵심 병목에 맞춘 우선 검토 사항과 다음 점검 지표" />
@@ -247,16 +306,16 @@ export default function Dashboard() {
     <SectionTitle number="3" title="조기 경보 · 지역 비교" subtitle="1년차 하락 지표의 2년차 회복 여부와 네 지역 차이" />
     <section className="compare-grid">
       <div className="panel warning"><span className="eyebrow">1년차 하락 지표</span>{warningRows.length ? <table><thead><tr><th>단계</th><th>1년차</th><th>2년 누적</th><th>판정</th></tr></thead><tbody>{warningRows.map(r => <tr key={r.metric}><td><b>{r.stage}</b><small>{LABEL[r.metric]}</small></td><td className="negative">{r.y1 > 0 ? "+" : ""}{r.y1.toFixed(1)}%</td><td>{r.y2 > 0 ? "+" : ""}{r.y2.toFixed(1)}%</td><td><span className={`pill ${r.y2 >= -3 ? "up" : "down"}`}>{r.y2 >= -3 ? "회복" : "미회복"}</span></td></tr>)}</tbody></table> : <p className="empty">지정 1년차에 내려간 단계가 없습니다.</p>}<p className="note">2년차 누적이 지정 직전 대비 −3% 이내면 회복으로 봅니다.</p></div>
-      <div className="panel matrix"><span className="eyebrow">4개 지역 비교 · {interval.label}</span><div className="table-scroll"><table><thead><tr><th>지역</th>{STAGES.map(([s]) => <th key={s}>{s}</th>)}<th>진단 유형</th></tr></thead><tbody>{Object.entries(data.sites).map(([key, s]) => <tr key={key} className={key === selected ? "selected-row" : ""} onClick={() => setSelected(key)}><td><b>{s.region}</b><small>{s.site}</small></td>{STAGES.map(([stage, m]) => { const code = status(key, m); return <td key={m} className={`signal ${STATUS[code][2]} ${s.bottleneck.includes(stage) ? "bottleneck" : ""}`}><b>{STATUS[code][1]}</b><small>{formatChange(change(key, m), m)}</small></td>; })}<td>{s.type}</td></tr>)}</tbody></table></div></div>
+      <div className="panel matrix"><span className="eyebrow">4개 지역 비교 · {interval.label}</span><div className="table-scroll"><table><thead><tr><th>지역</th>{STAGES.map(([s]) => <th key={s}>{s}</th>)}<th>진단 유형</th></tr></thead><tbody>{Object.entries(data.sites).map(([key, s]) => <tr key={key} className={key === selected ? "selected-row" : ""} onClick={() => setSelected(key)}><td><b>{s.region}</b><small>{s.site}</small></td>{STAGES.map(([stage, m]) => { const code = status(key, m); const bottleneck = s.bottleneck.includes(stage); return <td key={m} tabIndex={0} className={`signal ${STATUS[code][2]} ${bottleneck ? "bottleneck" : ""}`}><b>{STATUS[code][1]}</b><small>{formatChange(change(key, m), m)}</small><MatrixTooltip data={data} regionKey={key} stage={stage} metric={m} intervalKey={intervalKey} bottleneck={bottleneck} /></td>; })}<td>{s.type}</td></tr>)}</tbody></table></div></div>
     </section>
 
     <SectionTitle number="4" title="상세 근거" subtitle="지표를 선택해 변화의 크기와 데이터 범위를 확인합니다" />
     <section className="panel evidence"><div className="tabs">{tabs.map(([key, title]) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{title}</button>)}</div>
-      {tab === "flow" && <><p className="tab-help">다섯 단계를 첫 구간=100으로 맞췄습니다. 굵은 선은 핵심 병목입니다.</p><FlowChart data={data} selected={selected} /></>}
-      {tab === "its" && <><div className="metric-select"><label>지표</label><select value={metric} onChange={e => setMetric(e.target.value)}>{["숙박검색건수", "외지인방문자수", "숙박자비율_pct", "평균체류시간_분", "내국인관광소비_천원"].map(m => <option key={m} value={m}>{LABEL[m]}</option>)}</select></div><MonthlyChart data={data} selected={selected} metric={metric} /><div className="stats"><div><small>지정 시점 변화</small><b>{its ? formatChange(its.즉시변화_환산_pct ?? its.즉시수준변화_beta, metric) : "자료 없음"}</b></div><div><small>유의확률 p</small><b>{its ? Number(its.즉시수준변화_p).toFixed(3) : "–"}</b></div><div><small>보정 q</small><b>{its ? Number(its.즉시수준변화_q_BH).toFixed(3) : "–"}</b></div></div><p className="note">대조 지역이 없어 인과효과가 아닌 지정 전후 구조변화로 읽습니다.</p></>}
-      {tab === "wellness" && <div className="wellness-grid">{["숙박자비율_pct", "숙박자중_3박이상_pct", "전체순방문자중_3박이상_pct", "DSI", "방문자대비관광소비_천원_proxy"].map(m => <div key={m}><small>{LABEL[m]}</small><b>{formatLevel(kpi("P3", m), m)}</b><em>{formatChange(m.endsWith("_pct") ? kpi("P3", m) - kpi("P2", m) : (kpi("P3", m) / kpi("P2", m) - 1) * 100, m)}</em></div>)}</div>}
-      {tab === "market" && <div className="market-grid"><div><h3>방문자 출발지 상위 5 · 지정 2년차</h3>{data.origins[selected].map((r, i) => <div className="origin" key={`${r["거주지(시도)"]}-${r["거주지(시군구)"]}`}><span>{i + 1}</span><p>{r["거주지(시도)"]} {r["거주지(시군구)"]}<i style={{ width: `${r["비율(%)"] / data.origins[selected][0]["비율(%)"] * 100}%` }} /></p><b>{Number(r["비율(%)"]).toFixed(1)}%</b></div>)}</div><div><h3>시설 반경 5km 주변 환경</h3><div className="poi-grid">{["숙박", "음식점", "관광지", "문화시설"].map(k => <div key={k}><small>{k}</small><b>{data.environment[selected].poi[k] || 0}</b></div>)}</div><p className="note">최근접 숙박 {data.environment[selected].nearest?.distanceKm.toFixed(2)}km · {data.environment[selected].nearest?.name}</p></div></div>}
-      {tab === "table" && <div className="table-scroll"><table className="period-table"><thead><tr><th>지표</th>{PERIODS.map(p => <th key={p}>{PERIOD_LABEL[p]}</th>)}<th>지정 직후</th><th>2년차</th></tr></thead><tbody>{TABLE_METRICS.map(m => { const row = data.growth.find(r => r.지역키 === selected && r.지표 === m); return <tr key={m} className={STAGES.some(([s, mm]) => mm === m && site.bottleneck.includes(s)) ? "bottleneck-row" : ""}><td><b>{LABEL[m]}</b></td>{PERIODS.map(p => <td key={p}>{formatLevel(kpi(p, m), m)}</td>)}<td>{formatChange(row?.[m.endsWith("_pct") ? "delta23_pctp" : "g23_pct"], m)}</td><td>{formatChange(row?.[m.endsWith("_pct") ? "delta34_pctp" : "g34_pct"], m)}</td></tr>; })}</tbody></table></div>}
+      {tab === "flow" && <><p className="tab-help">다섯 단계를 첫 구간=100으로 맞췄습니다. 굵은 선은 핵심 병목이며, 아래에서 실제값과 구간별 변화를 확인할 수 있습니다.</p><FlowChart data={data} selected={selected} /><FlowDetails data={data} selected={selected} /></>}
+      {tab === "its" && <><div className="metric-select"><label>지표</label><select value={metric} onChange={e => setMetric(e.target.value)}>{["숙박검색건수", "외지인방문자수", "숙박자비율_pct", "평균체류시간_분", "평균숙박일수", "내국인관광소비_천원"].map(m => <option key={m} value={m}>{LABEL[m]}</option>)}</select></div><MonthlyChart data={data} selected={selected} metric={metric} /><div className="its-detail"><div className="its-detail-head"><span>확인 항목</span><span>변화 크기</span><span>p</span><span>보정 q</span><span>조건 확인</span><span>확인 강도</span></div>{[["지정 시점 계단", "즉시수준변화", its?.즉시수준변화_p, its?.즉시수준변화_q_BH, levelRobustness, levelStrength], ["지정 후 변화 속도", "지정후기울기변화", its?.지정후_기울기변화_p, its?.지정후_기울기변화_q_BH, slopeRobustness, slopeStrength]].map(([title, effect, p, q, robustness, strength]) => <div className="its-detail-row" key={effect}><b>{title}</b><strong>{its ? itsEffectText(its, metric, effect) : "자료 없음"}</strong><span>{finite(p) ? Number(p).toFixed(3) : "–"}</span><span>{finite(q) ? Number(q).toFixed(3) : "–"}</span><span>{robustness}/8</span><span className={`strength strength-${strengthClass(strength)}`}>{strength}</span></div>)}</div><p className="note"><b>읽는 법</b> · 지정 시점 계단은 지정월에 생긴 높이 변화, 지정 후 변화 속도는 이후 매달 더해진 변화입니다. 8가지 시작월·보정 조건에서 같은 신호가 반복되는지도 함께 확인합니다. 대조 지역이 없어 인과효과가 아닌 지정 전후 구조변화로 읽습니다.</p></>}
+      {tab === "wellness" && <><div className="wellness-grid">{["숙박자비율_pct", "숙박자중_3박이상_pct", "전체순방문자중_3박이상_pct", "DSI", "방문자대비관광소비_천원_proxy"].map(m => { const row = data.growth.find(r => r.지역키 === selected && r.지표 === m); return <div key={m}><small>{LABEL[m]}</small><b>{formatLevel(kpi("P3", m), m)}</b><em>지정 직후 {formatChange(periodChange(row, m, "23"), m)}</em><div className="wellness-periods"><span>직전 <b>{formatLevel(kpi("P2", m), m)}</b></span><span>1년차 <b>{formatLevel(kpi("P3", m), m)}</b></span><span>2년차 <b>{formatLevel(kpi("P4", m), m)}</b></span></div></div>; })}</div><p className="note"><b>지표 안내</b> · 장기체류 비율은 전체 방문자 중 3박 이상 숙박객의 비중입니다. 사계절 수요는 월별 방문 편차가 작을수록 1에 가까우며, 방문자 대비 소비는 서로 다른 자료를 결합한 대리지표입니다.</p></>}
+      {tab === "market" && <><div className="market-grid"><div><h3>방문자 출발지 상위 5 · 지정 2년차</h3>{data.origins[selected].map((r, i) => <div className="origin" key={`${r["거주지(시도)"]}-${r["거주지(시군구)"]}`}><span>{i + 1}</span><p>{r["거주지(시도)"]} {r["거주지(시군구)"]}<i style={{ width: `${r["비율(%)"] / data.origins[selected][0]["비율(%)"] * 100}%` }} /></p><b>{Number(r["비율(%)"]).toFixed(1)}%</b></div>)}</div><div><h3>시설 반경 5km 주변 환경</h3><div className="poi-grid">{["숙박", "음식점", "관광지", "문화시설"].map(k => <div key={k}><small>{k}</small><b>{data.environment[selected].poi[k] || 0}</b></div>)}</div><p className="note">최근접 숙박 {data.environment[selected].nearest?.distanceKm.toFixed(2)}km · {data.environment[selected].nearest?.name}</p></div></div><p className="note"><b>읽는 법</b> · 출발지는 지정 2년차 방문자의 거주지 분포입니다. 주변 숙박 수와 최근접 거리는 체류를 뒷받침할 공급 환경이며 시설 이용 실적을 뜻하지 않습니다.</p></>}
+      {tab === "table" && <><div className="table-scroll"><table className="period-table"><thead><tr><th>지표</th>{PERIODS.map(p => <th key={p}>{PERIOD_LABEL[p]}</th>)}<th>지정 전</th><th>지정 직후</th><th>2년차</th></tr></thead><tbody>{TABLE_METRICS.map(m => { const row = data.growth.find(r => r.지역키 === selected && r.지표 === m); return <tr key={m} className={STAGES.some(([s, mm]) => mm === m && site.bottleneck.includes(s)) ? "bottleneck-row" : ""}><td><b>{LABEL[m]}</b></td>{PERIODS.map(p => <td key={p}>{formatLevel(kpi(p, m), m)}</td>)}{["12", "23", "34"].map(periodKey => { const value = periodChange(row, m, periodKey); return <td key={periodKey} className={`period-change ${changeClass(value)}`}>{formatChange(value, m)}</td>; })}</tr>; })}</tbody></table></div><p className="note"><b>집계 기준</b> · 검색·방문·소비는 12개월 합계, 비율·시간은 방문객 수로 가중평균했습니다. 변화 칸은 ±3% 기준이며 비율 지표는 %p로 표시합니다. 월 자료가 빠진 구간은 계산하지 않습니다.</p></>}
       {tab === "quality" && <DataQuality data={data} selected={selected} />}
     </section>
     <footer>WELL-FLOW · 한국관광 데이터랩 공개 자료 · 시설 소재 시군구 관광시장 · ±3% 실무용 방향 판정</footer>
