@@ -61,7 +61,7 @@ SITES = {
     },
     "전북무주": {
         "region": "무주군", "site": "태권도원 상징지구", "dong": "설천면", "year": 2022, "theme": "힐링/명상",
-        "longitude": 127.762090, "latitude": 36.012521, "geoName": "Muju", "image": "muju.jpg",
+        "longitude": 127.7754294, "latitude": 36.0095801, "geoName": "Muju", "image": "muju.jpg",
         "address": "전북특별자치도 무주군 설천면 무설로 1482",
         "type": "선행 성장형", "headline": "성과는 좋지만 상승은 지정 전에 이미 시작됐다",
         "bottleneck": ["체류"], "bottleneckLabel": "체류 길이·연박 전환", "strength": "약함",
@@ -119,6 +119,35 @@ def main() -> None:
         group["비율(%)"] = pd.to_numeric(group["비율(%)"], errors="coerce")
         origin_top[key] = json.loads(group.nlargest(5, "비율(%)").to_json(orient="records", force_ascii=False))
 
+    category_change = records("category_change.csv")
+
+    lodging_key = {
+        "완주 아원고택": "전북완주",
+        "순창 쉴랜드": "전북순창",
+        "완도 해양치유센터": "전남완도",
+        "무주 태권도원 상징지구": "전북무주",
+    }
+    lodging_current = pd.read_csv(SUPPORT / "4개_관광지_숙박공급_현재.csv", encoding="utf-8-sig")
+    lodging_periods = pd.read_csv(SUPPORT / "4개_관광지_숙박공급_P1_P4.csv", encoding="utf-8-sig")
+    lodging_inventory = pd.read_csv(SUPPORT / "4개_관광지_숙박업체_상세.csv", encoding="utf-8-sig")
+    lodging_sensitivity = pd.read_csv(SUPPORT / "대형부지_5km반경_민감도.csv", encoding="utf-8-sig")
+    lodging = {}
+    for label, key in lodging_key.items():
+        current = lodging_current[lodging_current["관광지"].eq(label)]
+        periods_supply = lodging_periods[
+            lodging_periods["관광지"].eq(label) & lodging_periods["반경_km"].eq(5)
+        ]
+        inventory = lodging_inventory[lodging_inventory["관광지"].eq(label)]
+        sensitivity = lodging_sensitivity[lodging_sensitivity["관광지"].eq(label)]
+        lodging[key] = {
+            "current": json.loads(current.to_json(orient="records", force_ascii=False)),
+            "periods": json.loads(periods_supply.to_json(orient="records", force_ascii=False)),
+            "inventory": json.loads(inventory.to_json(orient="records", force_ascii=False)),
+            "sensitivity": None if sensitivity.empty else json.loads(
+                sensitivity.iloc[0].to_json(force_ascii=False)
+            ),
+        }
+
     payload = clean({
         "sites": SITES,
         "kpi": records("kpi_by_period.csv"),
@@ -130,6 +159,8 @@ def main() -> None:
         "spread": records("spatial_relative_growth_available_sites.csv"),
         "origins": origin_top,
         "environment": environment,
+        "categoryChange": category_change,
+        "lodging": lodging,
     })
     (PUBLIC / "data" / "dashboard.json").write_text(
         json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"

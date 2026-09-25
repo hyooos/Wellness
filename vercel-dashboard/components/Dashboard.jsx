@@ -206,6 +206,67 @@ function MatrixTooltip({ data, regionKey, stage, metric, intervalKey, bottleneck
   return <div className="matrix-tooltip" role="tooltip"><div className="tooltip-title">{data.sites[regionKey].region} · {stage}{bottleneck ? " · 핵심 병목" : ""}</div><p>{LABEL[metric]}: <b>{formatLevel(before, metric)} → {formatLevel(after, metric)}</b> ({STATUS[code]?.[0] || "자료 없음"})</p></div>;
 }
 
+function formatEok(value, signed = true) {
+  if (!finite(Number(value))) return "–";
+  const eok = Number(value) / 100000;
+  const sign = signed && eok > 0 ? "+" : "";
+  return `${sign}${eok.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}억 원`;
+}
+
+function SpendingCategories({ data, selected, intervalKey, onIntervalChange }) {
+  const intervalName = intervalKey === "immediate" ? "P2→P3" : "P3→P4";
+  const rows = data.categoryChange.filter(r => r.지역키 === selected && r.변화구간 === intervalName && finite(Number(r.실제변화_천원)));
+  const decreases = [...rows].filter(r => Number(r.실제변화_천원) < 0).sort((a, b) => Number(a.실제변화_천원) - Number(b.실제변화_천원)).slice(0, 3);
+  const increases = [...rows].filter(r => Number(r.실제변화_천원) > 0).sort((a, b) => Number(b.실제변화_천원) - Number(a.실제변화_천원)).slice(0, 3);
+  const total = rows.reduce((sum, row) => sum + Number(row.실제변화_천원), 0);
+  const maxAbs = Math.max(1, ...decreases.concat(increases).map(r => Math.abs(Number(r.실제변화_천원))));
+  const dominant = total < 0 ? decreases[0] : increases[0];
+  const renderRows = (items, direction) => <div className="category-list">{items.map(row => {
+    const value = Number(row.실제변화_천원);
+    return <div className={`category-row ${direction}`} key={row.중분류} tabIndex={0}>
+      <div className="category-name"><b>{row.중분류}</b><span>{Number(row.성장률_pct) > 0 ? "+" : ""}{Number(row.성장률_pct).toFixed(1)}%</span></div>
+      <div className="category-track"><i style={{ width: `${Math.abs(value) / maxAbs * 100}%` }} /></div>
+      <strong>{formatEok(value)}</strong>
+      <div className="category-tooltip" role="tooltip"><b>{row.중분류}</b><span>{formatEok(row.before_천원, false)} → {formatEok(row.after_천원, false)}</span><em>증감 {formatEok(value)} · {Number(row.성장률_pct) > 0 ? "+" : ""}{Number(row.성장률_pct).toFixed(1)}%</em></div>
+    </div>;
+  })}</div>;
+  return <div className="spending-detail">
+    <div className="detail-heading"><div><span className="eyebrow">시군구 내국인 관광소비</span><h3>소비 변화는 어디서 발생했나</h3></div><div className="spending-controls"><div className="segmented compact"><button className={intervalKey === "immediate" ? "active" : ""} onClick={() => onIntervalChange("immediate")}>지정 직후</button><button className={intervalKey === "second" ? "active" : ""} onClick={() => onIntervalChange("second")}>2년차</button></div><div className={`total-change ${total >= 0 ? "positive" : "negative"}`}><small>업종 합계</small><b>{formatEok(total)}</b></div></div></div>
+    {dominant && <p className="insight-line"><b>{dominant.중분류}</b>이(가) 가장 큰 {total < 0 ? "감소" : "증가"} 요인입니다. 업종 전체가 같은 방향으로 움직였는지 함께 확인하세요.</p>}
+    <div className="category-columns"><div><h4>감소 기여 상위</h4>{decreases.length ? renderRows(decreases, "decrease") : <p className="empty compact">감소 업종이 없습니다.</p>}</div><div><h4>증가 기여 상위</h4>{increases.length ? renderRows(increases, "increase") : <p className="empty compact">증가 업종이 없습니다.</p>}</div></div>
+    <p className="note"><b>읽는 법</b> · 막대는 증감률이 아니라 실제 증감액입니다. 마우스를 올리면 이전·이후 금액과 증감률을 볼 수 있습니다. 시설 결제액이 아닌 시설 소재 시군구의 내국인 관광소비입니다.</p>
+  </div>;
+}
+
+function LodgingSupply({ data, selected }) {
+  const supply = data.lodging[selected];
+  const byRadius = radius => supply.current.find(r => Number(r.반경_km) === radius);
+  const own = byRadius(5); const r2 = byRadius(2); const r5 = byRadius(5);
+  const ownUnit = selected === "전북순창" ? "개 숙박 단위" : "실";
+  const ownRooms = Number(own?.시설자체_예약가능객실수 || 0);
+  const insight = {
+    전북완주: "자체 숙박은 가능하지만 주변 외부 숙소가 매우 적습니다.",
+    전북순창: "자체 숙박은 갖췄지만 주변 연계 숙소는 거의 없습니다.",
+    전남완도: "주변 객실은 충분해 공급 부족만으로 숙박 전환을 설명하기 어렵습니다.",
+    전북무주: "시설 내부 숙박 공급이 크고 주변 외부 숙소는 보조 역할을 합니다.",
+  }[selected];
+  const maxPeriod = Math.max(1, ...supply.periods.map(r => Number(r.주변외부_평균객실수) || 0));
+  const external = supply.inventory.filter(r => r.시설자체여부 === "주변 외부").slice(0, 5);
+  const sensitivity = supply.sensitivity;
+  return <div className="lodging-detail">
+    <div className="detail-heading"><div><span className="eyebrow">숙박 수요를 뒷받침하는 공급</span><h3>시설 안과 주변에 얼마나 머물 수 있나</h3></div><p className="supply-insight">{insight}</p></div>
+    <div className="supply-cards">
+      <div className="supply-card own"><small>시설 자체</small><b>{ownRooms ? `${ownRooms}${ownUnit}` : "자체 숙박 없음"}</b><span>{own?.시설자체_수용인원설명 !== "확인 안 됨" ? own?.시설자체_수용인원설명 : own?.시설자체_원자료상태}</span><em>{own?.시설자체_객실유형}</em></div>
+      <div className="supply-card"><small>주변 외부 · 2km</small><b>{Number(r2?.주변외부_업체수 || 0)}곳 · {Number(r2?.주변외부_총객실수 || 0)}실</b><span>시설 대표지점 기준</span></div>
+      <div className="supply-card"><small>주변 외부 · 5km</small><b>{Number(r5?.주변외부_업체수 || 0)}곳 · {Number(r5?.주변외부_총객실수 || 0)}실</b><span>{r5?.주변외부_업태별}</span></div>
+    </div>
+    {sensitivity && <div className={`boundary-note ${sensitivity.판정 === "안정" ? "stable" : "review"}`}><b>{sensitivity.판정 === "안정" ? "대형 부지 확인" : "부지 경계 확인 필요"}</b><span>{sensitivity.판정 === "안정" ? `부지 면적을 고려해도 5km 공급은 ${Number(sensitivity.대표점5km_외부객실수)}실로 같습니다.` : `대표점 기준 0실이지만 경계 인접 후보 ${Number(sensitivity["5km밖_최근접객실수"])}실이 있습니다.`}</span></div>}
+    <div className="supply-lower"><div><h4>지정 전후 주변 외부 객실</h4><div className="supply-periods">{PERIODS.map(period => { const row = supply.periods.find(r => r.기간 === period); const value = Number(row?.주변외부_평균객실수 || 0); return <div key={period}><span>{PERIOD_LABEL[period]}{Number(row?.관측개월수) < Number(row?.필요개월수) ? ` · ${row.관측개월수}개월` : ""}</span><div><i style={{ width: `${value / maxPeriod * 100}%` }} /></div><b>{value.toFixed(1)}실</b></div>; })}</div></div>
+      <div><h4>가까운 외부 숙박</h4>{external.length ? <div className="nearby-list">{external.map(row => <div key={`${row.사업장명}-${row.거리_km}`}><p><b>{row.사업장명}</b><span>{row.업태구분명}</span></p><strong>{Number(row.거리_km).toFixed(2)}km · {Number(row.총객실수)}실</strong></div>)}</div> : <p className="empty compact">대표지점 5km 안에 외부 숙박이 없습니다.</p>}</div></div>
+    <p className="note"><b>자료 기준</b> · 시설 자체는 시설 안내자료, 주변 외부는 숙박업 인허가 자료입니다. 주변 공급은 시설 대표지점의 직선거리이며 성과 점수에는 넣지 않습니다.</p>
+  </div>;
+}
+
 function DataQuality({ data, selected }) {
   const hasOrigin = (data.origins[selected] || []).length > 0;
   const hasSpread = data.spread.some(r => r.지역키 === selected);
@@ -213,6 +274,8 @@ function DataQuality({ data, selected }) {
     ["관심 · 방문", "시군구 월별", "확보", "ok", "티맵 숙박 검색, KT 외지인 방문"],
     ["숙박 전환 · 체류", "시군구 월별", "확보", "ok", "KT 숙박자 비율·체류시간, 방문객 수 가중평균"],
     ["소비", "시군구 월별", "확보", "ok", "신한카드 내국인 관광소비, 업종별 포함"],
+    ["소비 업종별 변화", "시군구 연간", "확보", "ok", "증감액을 중심으로 원인을 살피며 시설 결제액을 뜻하지 않음"],
+    ["주변 숙박 공급", "시설 대표점 반경", "보조자료", "partial", "시설 안내자료와 숙박업 인허가 자료를 분리해 표시"],
     ["방문자 대비 소비", "시군구", "대리지표", "partial", "카드 이용자와 방문자가 달라 1인당 소비가 아님"],
     ["시설지 소비 집중도", "읍면동", hasSpread ? "참고" : "자료 없음", hasSpread ? "partial" : "missing", hasSpread ? "시설 소재 읍면의 소비 비중이며 성과 판정에는 사용하지 않음" : "지정 전후 구간과 맞는 읍면동 자료 없음"],
     ["방문 출발지", "시군구", hasOrigin ? "확보" : "자료 없음", hasOrigin ? "ok" : "missing", "검색 출발지는 광역별 조건부 분포라 광역마다 따로 비교"],
@@ -345,7 +408,7 @@ export default function Dashboard() {
   const slopeStrength = itsStrength(data, selected, metric, "지정후기울기변화");
   const levelRobustness = robustnessCount(data, selected, metric, "즉시수준변화");
   const slopeRobustness = robustnessCount(data, selected, metric, "지정후기울기변화");
-  const tabs = [["flow", "흐름 추이"], ["its", "지정 시점 확인"], ["wellness", "웰니스 지표"], ["market", "방문 출발지·주변 환경"], ["table", "기간별 수치 비교"], ["quality", "데이터 신뢰도"]];
+  const tabs = [["flow", "흐름 추이"], ["its", "지정 시점 확인"], ["wellness", "웰니스 지표"], ["lodging", "숙박 공급"], ["spending", "소비 업종"], ["market", "방문 출발지·주변 환경"], ["table", "기간별 수치 비교"], ["quality", "데이터 신뢰도"]];
 
   return <main>
     <header className="topbar"><div className="brand"><b>WELL-FLOW <span>Monitor</span></b><p>웰니스 관광지 성과 진단</p></div><div className="top-meta">{site.region} 분석기간 · {ym(period.P1.시작월)}–{ym(period.P4.종료월)} · 지정월 기준</div></header>
@@ -379,10 +442,12 @@ export default function Dashboard() {
       {tab === "flow" && <><p className="tab-help">다섯 단계를 첫 구간=100으로 맞췄습니다. 굵은 선은 핵심 병목입니다.</p><FlowChart data={data} selected={selected} /></>}
       {tab === "its" && <><div className="metric-select"><label>지표</label><select value={metric} onChange={e => setMetric(e.target.value)}>{["숙박검색건수", "외지인방문자수", "숙박자비율_pct", "평균체류시간_분", "평균숙박일수", "내국인관광소비_천원"].map(m => <option key={m} value={m}>{LABEL[m]}</option>)}</select></div><MonthlyChart data={data} selected={selected} metric={metric} /><div className="its-summary"><p><b>지정 시점 변화</b> {its ? itsEffectText(its, metric, "즉시수준변화") : "자료 없음"} · {levelStrength}<small>p {finite(its?.즉시수준변화_p) ? Number(its.즉시수준변화_p).toFixed(3) : "–"} · 보정 q {finite(its?.즉시수준변화_q_BH) ? Number(its.즉시수준변화_q_BH).toFixed(3) : "–"} · 조건 {levelRobustness}/8</small></p><p><b>지정 후 변화 속도</b> {its ? itsEffectText(its, metric, "지정후기울기변화") : "자료 없음"} · {slopeStrength}<small>p {finite(its?.지정후_기울기변화_p) ? Number(its.지정후_기울기변화_p).toFixed(3) : "–"} · 보정 q {finite(its?.지정후_기울기변화_q_BH) ? Number(its.지정후_기울기변화_q_BH).toFixed(3) : "–"} · 조건 {slopeRobustness}/8</small></p></div><p className="note"><b>세 선을 나눈 이유</b> · 실제 값은 월별 관측치, 계절 반영 추정선은 계절·기존 추세·지정 시점 변화를 함께 반영한 모델값입니다. ‘지정 전 흐름이 이어졌다면’은 지정 시점 변화만 빼고 계산한 비교선입니다. 두 추정선의 차이는 지정 시점과 함께 나타난 구조변화를 뜻하며, 비교 지역이 없어 지정의 인과효과로 단정하지 않습니다.</p></>}
       {tab === "wellness" && <><div className="wellness-grid">{["숙박자비율_pct", "숙박자중_3박이상_pct", "전체순방문자중_3박이상_pct", "DSI", "방문자대비관광소비_천원_proxy"].map(m => { const row = data.growth.find(r => r.지역키 === selected && r.지표 === m); return <div key={m}><small>{LABEL[m]}</small><b>{formatLevel(kpi("P3", m), m)}</b><em>지정 직후 {formatChange(periodChange(row, m, "23"), m)}</em><div className="wellness-periods"><span>직전 <b>{formatLevel(kpi("P2", m), m)}</b></span><span>1년차 <b>{formatLevel(kpi("P3", m), m)}</b></span><span>2년차 <b>{formatLevel(kpi("P4", m), m)}</b></span></div></div>; })}</div><p className="note"><b>지표 안내</b> · 장기체류 비율은 전체 방문자 중 3박 이상 숙박객의 비중입니다. 사계절 수요는 월별 방문 편차가 작을수록 1에 가까우며, 방문자 대비 소비는 서로 다른 자료를 결합한 대리지표입니다.</p></>}
-      {tab === "market" && <><div className="market-grid"><div><h3>방문자 출발지 상위 5 · 지정 2년차</h3>{data.origins[selected].map((r, i) => <div className="origin" key={`${r["거주지(시도)"]}-${r["거주지(시군구)"]}`}><span>{i + 1}</span><p>{r["거주지(시도)"]} {r["거주지(시군구)"]}<i style={{ width: `${r["비율(%)"] / data.origins[selected][0]["비율(%)"] * 100}%` }} /></p><b>{Number(r["비율(%)"]).toFixed(1)}%</b></div>)}</div><div><h3>시설 반경 5km 주변 환경</h3><div className="poi-grid">{["숙박", "음식점", "관광지", "문화시설"].map(k => <div key={k}><small>{k}</small><b>{data.environment[selected].poi[k] || 0}</b></div>)}</div><p className="note">최근접 숙박 {data.environment[selected].nearest?.distanceKm.toFixed(2)}km · {data.environment[selected].nearest?.name}</p></div></div><p className="note"><b>읽는 법</b> · 출발지는 지정 2년차 방문자의 거주지 분포입니다. 주변 숙박 수와 최근접 거리는 체류를 뒷받침할 공급 환경이며 시설 이용 실적을 뜻하지 않습니다.</p></>}
+      {tab === "lodging" && <LodgingSupply data={data} selected={selected} />}
+      {tab === "spending" && <SpendingCategories data={data} selected={selected} intervalKey={intervalKey} onIntervalChange={setIntervalKey} />}
+      {tab === "market" && <><div className="market-grid"><div><h3>방문자 출발지 상위 5 · 지정 2년차</h3>{data.origins[selected].map((r, i) => <div className="origin" key={`${r["거주지(시도)"]}-${r["거주지(시군구)"]}`}><span>{i + 1}</span><p>{r["거주지(시도)"]} {r["거주지(시군구)"]}<i style={{ width: `${r["비율(%)"] / data.origins[selected][0]["비율(%)"] * 100}%` }} /></p><b>{Number(r["비율(%)"]).toFixed(1)}%</b></div>)}</div><div><h3>시설 반경 5km 주변 환경</h3><div className="poi-grid">{["음식점", "관광지", "문화시설", "레포츠"].map(k => <div key={k}><small>{k}</small><b>{data.environment[selected].poi[k] || 0}</b></div>)}</div></div></div><p className="note"><b>읽는 법</b> · 출발지는 지정 2년차 방문자의 거주지 분포입니다. 주변 환경은 TourAPI 등록 지점 수이며, 숙박시설은 별도 ‘숙박 공급’ 탭에서 인허가 객실 기준으로 확인합니다.</p></>}
       {tab === "table" && <div className="table-scroll"><table className="period-table"><thead><tr><th>지표</th>{PERIODS.map(p => <th key={p}>{PERIOD_LABEL[p]}</th>)}<th>지정 직후</th><th>2년차</th></tr></thead><tbody>{TABLE_METRICS.map(m => { const row = data.growth.find(r => r.지역키 === selected && r.지표 === m); return <tr key={m} className={STAGES.some(([s, mm]) => mm === m && site.bottleneck.includes(s)) ? "bottleneck-row" : ""}><td><b>{LABEL[m]}</b></td>{PERIODS.map(p => <td key={p}>{formatLevel(kpi(p, m), m)}</td>)}<td>{formatChange(row?.[m.endsWith("_pct") ? "delta23_pctp" : "g23_pct"], m)}</td><td>{formatChange(row?.[m.endsWith("_pct") ? "delta34_pctp" : "g34_pct"], m)}</td></tr>; })}</tbody></table></div>}
       {tab === "quality" && <DataQuality data={data} selected={selected} />}
     </section>
-    <footer>WELL-FLOW · 한국관광 데이터랩 공개자료 기반</footer>
+    <footer>WELL-FLOW · 관광·시설 공개자료 기반</footer>
   </main>;
 }
