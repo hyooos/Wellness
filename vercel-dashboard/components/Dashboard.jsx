@@ -383,6 +383,6 @@ export default function Dashboard() {
       {tab === "table" && <div className="table-scroll"><table className="period-table"><thead><tr><th>지표</th>{PERIODS.map(p => <th key={p}>{PERIOD_LABEL[p]}</th>)}<th>지정 직후</th><th>2년차</th></tr></thead><tbody>{TABLE_METRICS.map(m => { const row = data.growth.find(r => r.지역키 === selected && r.지표 === m); return <tr key={m} className={STAGES.some(([s, mm]) => mm === m && site.bottleneck.includes(s)) ? "bottleneck-row" : ""}><td><b>{LABEL[m]}</b></td>{PERIODS.map(p => <td key={p}>{formatLevel(kpi(p, m), m)}</td>)}<td>{formatChange(row?.[m.endsWith("_pct") ? "delta23_pctp" : "g23_pct"], m)}</td><td>{formatChange(row?.[m.endsWith("_pct") ? "delta34_pctp" : "g34_pct"], m)}</td></tr>; })}</tbody></table></div>}
       {tab === "quality" && <DataQuality data={data} selected={selected} />}
     </section>
-    <footer>WELL-FLOW · 한국관광 데이터랩 공개 자료 · 시설 소재 시군구 관광시장 · ±3% 실무용 방향 판정</footer>
+    <footer>WELL-FLOW · 한국관광 데이터랩 공개자료 기반</footer>
   </main>;
 }
