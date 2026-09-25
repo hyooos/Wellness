@@ -71,13 +71,6 @@ function periodChange(row, metric, interval) {
   if (!row) return null;
   return row[metric.endsWith("_pct") ? `delta${interval}_pctp` : `g${interval}_pct`];
 }
-function changeClass(value) {
-  if (!finite(value)) return "na";
-  if (value > 3) return "up";
-  if (value < -3) return "down";
-  return "flat";
-}
-
 function itsEffectText(row, metric, effect) {
   const immediate = effect === "즉시수준변화";
   const beta = immediate ? row?.즉시수준변화_beta : row?.지정후_기울기변화_beta;
@@ -233,15 +226,6 @@ function FlowChart({ data, selected }) {
   </LineChart></ResponsiveContainer></div>;
 }
 
-function FlowDetails({ data, selected }) {
-  const site = data.sites[selected];
-  return <div className="flow-details">{STAGES.map(([stage, metric]) => {
-    const row = data.growth.find(r => r.지역키 === selected && r.지표 === metric);
-    const bottleneck = site.bottleneck.includes(stage);
-    return <div key={stage} className={`flow-detail-card ${bottleneck ? "bottleneck" : ""}`}><div><span>{stage}</span>{bottleneck && <em>핵심 병목</em>}</div><b>{formatLevel(data.kpi.find(r => r.지역키 === selected && r.기간 === "P4")?.[metric], metric)}</b><small>지정 전 {formatChange(periodChange(row, metric, "12"), metric)}</small><small>지정 직후 {formatChange(periodChange(row, metric, "23"), metric)}</small><small>2년차 {formatChange(periodChange(row, metric, "34"), metric)}</small></div>;
-  })}</div>;
-}
-
 function DesignationLabel({ viewBox }) {
   if (!viewBox) return null;
   const x = (viewBox.x || 0) + 7, y = (viewBox.y || 0) + 7;
@@ -311,11 +295,11 @@ export default function Dashboard() {
 
     <SectionTitle number="4" title="상세 근거" subtitle="지표를 선택해 변화의 크기와 데이터 범위를 확인합니다" />
     <section className="panel evidence"><div className="tabs">{tabs.map(([key, title]) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{title}</button>)}</div>
-      {tab === "flow" && <><p className="tab-help">다섯 단계를 첫 구간=100으로 맞췄습니다. 굵은 선은 핵심 병목이며, 아래에서 실제값과 구간별 변화를 확인할 수 있습니다.</p><FlowChart data={data} selected={selected} /><FlowDetails data={data} selected={selected} /></>}
-      {tab === "its" && <><div className="metric-select"><label>지표</label><select value={metric} onChange={e => setMetric(e.target.value)}>{["숙박검색건수", "외지인방문자수", "숙박자비율_pct", "평균체류시간_분", "평균숙박일수", "내국인관광소비_천원"].map(m => <option key={m} value={m}>{LABEL[m]}</option>)}</select></div><MonthlyChart data={data} selected={selected} metric={metric} /><div className="its-detail"><div className="its-detail-head"><span>확인 항목</span><span>변화 크기</span><span>p</span><span>보정 q</span><span>조건 확인</span><span>확인 강도</span></div>{[["지정 시점 계단", "즉시수준변화", its?.즉시수준변화_p, its?.즉시수준변화_q_BH, levelRobustness, levelStrength], ["지정 후 변화 속도", "지정후기울기변화", its?.지정후_기울기변화_p, its?.지정후_기울기변화_q_BH, slopeRobustness, slopeStrength]].map(([title, effect, p, q, robustness, strength]) => <div className="its-detail-row" key={effect}><b>{title}</b><strong>{its ? itsEffectText(its, metric, effect) : "자료 없음"}</strong><span>{finite(p) ? Number(p).toFixed(3) : "–"}</span><span>{finite(q) ? Number(q).toFixed(3) : "–"}</span><span>{robustness}/8</span><span className={`strength strength-${strengthClass(strength)}`}>{strength}</span></div>)}</div><p className="note"><b>읽는 법</b> · 지정 시점 계단은 지정월에 생긴 높이 변화, 지정 후 변화 속도는 이후 매달 더해진 변화입니다. 8가지 시작월·보정 조건에서 같은 신호가 반복되는지도 함께 확인합니다. 대조 지역이 없어 인과효과가 아닌 지정 전후 구조변화로 읽습니다.</p></>}
+      {tab === "flow" && <><p className="tab-help">다섯 단계를 첫 구간=100으로 맞췄습니다. 굵은 선은 핵심 병목입니다.</p><FlowChart data={data} selected={selected} /></>}
+      {tab === "its" && <><div className="metric-select"><label>지표</label><select value={metric} onChange={e => setMetric(e.target.value)}>{["숙박검색건수", "외지인방문자수", "숙박자비율_pct", "평균체류시간_분", "평균숙박일수", "내국인관광소비_천원"].map(m => <option key={m} value={m}>{LABEL[m]}</option>)}</select></div><MonthlyChart data={data} selected={selected} metric={metric} /><div className="its-summary"><p><b>지정 시점 변화</b> {its ? itsEffectText(its, metric, "즉시수준변화") : "자료 없음"} · {levelStrength}<small>p {finite(its?.즉시수준변화_p) ? Number(its.즉시수준변화_p).toFixed(3) : "–"} · 보정 q {finite(its?.즉시수준변화_q_BH) ? Number(its.즉시수준변화_q_BH).toFixed(3) : "–"} · 조건 {levelRobustness}/8</small></p><p><b>지정 후 변화 속도</b> {its ? itsEffectText(its, metric, "지정후기울기변화") : "자료 없음"} · {slopeStrength}<small>p {finite(its?.지정후_기울기변화_p) ? Number(its.지정후_기울기변화_p).toFixed(3) : "–"} · 보정 q {finite(its?.지정후_기울기변화_q_BH) ? Number(its.지정후_기울기변화_q_BH).toFixed(3) : "–"} · 조건 {slopeRobustness}/8</small></p></div><p className="note">지정 시점 변화는 지정월의 높이 변화, 지정 후 변화 속도는 이후 매달 더해진 변화입니다. 대조 지역이 없어 인과효과가 아닌 지정 전후 구조변화로 읽습니다.</p></>}
       {tab === "wellness" && <><div className="wellness-grid">{["숙박자비율_pct", "숙박자중_3박이상_pct", "전체순방문자중_3박이상_pct", "DSI", "방문자대비관광소비_천원_proxy"].map(m => { const row = data.growth.find(r => r.지역키 === selected && r.지표 === m); return <div key={m}><small>{LABEL[m]}</small><b>{formatLevel(kpi("P3", m), m)}</b><em>지정 직후 {formatChange(periodChange(row, m, "23"), m)}</em><div className="wellness-periods"><span>직전 <b>{formatLevel(kpi("P2", m), m)}</b></span><span>1년차 <b>{formatLevel(kpi("P3", m), m)}</b></span><span>2년차 <b>{formatLevel(kpi("P4", m), m)}</b></span></div></div>; })}</div><p className="note"><b>지표 안내</b> · 장기체류 비율은 전체 방문자 중 3박 이상 숙박객의 비중입니다. 사계절 수요는 월별 방문 편차가 작을수록 1에 가까우며, 방문자 대비 소비는 서로 다른 자료를 결합한 대리지표입니다.</p></>}
       {tab === "market" && <><div className="market-grid"><div><h3>방문자 출발지 상위 5 · 지정 2년차</h3>{data.origins[selected].map((r, i) => <div className="origin" key={`${r["거주지(시도)"]}-${r["거주지(시군구)"]}`}><span>{i + 1}</span><p>{r["거주지(시도)"]} {r["거주지(시군구)"]}<i style={{ width: `${r["비율(%)"] / data.origins[selected][0]["비율(%)"] * 100}%` }} /></p><b>{Number(r["비율(%)"]).toFixed(1)}%</b></div>)}</div><div><h3>시설 반경 5km 주변 환경</h3><div className="poi-grid">{["숙박", "음식점", "관광지", "문화시설"].map(k => <div key={k}><small>{k}</small><b>{data.environment[selected].poi[k] || 0}</b></div>)}</div><p className="note">최근접 숙박 {data.environment[selected].nearest?.distanceKm.toFixed(2)}km · {data.environment[selected].nearest?.name}</p></div></div><p className="note"><b>읽는 법</b> · 출발지는 지정 2년차 방문자의 거주지 분포입니다. 주변 숙박 수와 최근접 거리는 체류를 뒷받침할 공급 환경이며 시설 이용 실적을 뜻하지 않습니다.</p></>}
-      {tab === "table" && <><div className="table-scroll"><table className="period-table"><thead><tr><th>지표</th>{PERIODS.map(p => <th key={p}>{PERIOD_LABEL[p]}</th>)}<th>지정 전</th><th>지정 직후</th><th>2년차</th></tr></thead><tbody>{TABLE_METRICS.map(m => { const row = data.growth.find(r => r.지역키 === selected && r.지표 === m); return <tr key={m} className={STAGES.some(([s, mm]) => mm === m && site.bottleneck.includes(s)) ? "bottleneck-row" : ""}><td><b>{LABEL[m]}</b></td>{PERIODS.map(p => <td key={p}>{formatLevel(kpi(p, m), m)}</td>)}{["12", "23", "34"].map(periodKey => { const value = periodChange(row, m, periodKey); return <td key={periodKey} className={`period-change ${changeClass(value)}`}>{formatChange(value, m)}</td>; })}</tr>; })}</tbody></table></div><p className="note"><b>집계 기준</b> · 검색·방문·소비는 12개월 합계, 비율·시간은 방문객 수로 가중평균했습니다. 변화 칸은 ±3% 기준이며 비율 지표는 %p로 표시합니다. 월 자료가 빠진 구간은 계산하지 않습니다.</p></>}
+      {tab === "table" && <div className="table-scroll"><table className="period-table"><thead><tr><th>지표</th>{PERIODS.map(p => <th key={p}>{PERIOD_LABEL[p]}</th>)}<th>지정 직후</th><th>2년차</th></tr></thead><tbody>{TABLE_METRICS.map(m => { const row = data.growth.find(r => r.지역키 === selected && r.지표 === m); return <tr key={m} className={STAGES.some(([s, mm]) => mm === m && site.bottleneck.includes(s)) ? "bottleneck-row" : ""}><td><b>{LABEL[m]}</b></td>{PERIODS.map(p => <td key={p}>{formatLevel(kpi(p, m), m)}</td>)}<td>{formatChange(row?.[m.endsWith("_pct") ? "delta23_pctp" : "g23_pct"], m)}</td><td>{formatChange(row?.[m.endsWith("_pct") ? "delta34_pctp" : "g34_pct"], m)}</td></tr>; })}</tbody></table></div>}
       {tab === "quality" && <DataQuality data={data} selected={selected} />}
     </section>
     <footer>WELL-FLOW · 한국관광 데이터랩 공개 자료 · 시설 소재 시군구 관광시장 · ±3% 실무용 방향 판정</footer>
