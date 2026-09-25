@@ -27,9 +27,9 @@ CRS 검증(별도로 pyproj 랜드마크 대조 3곳 — 해운대/서울/제주
     venv/bin/python3 scripts/geo_room_capacity.py
 
 출력:
-    output/geo_room_capacity.csv         - 방법(radius_1/2/5km|dong) x 기간(P1~P4)
-    output/geo_room_capacity_monthly.csv - 방법(radius_1/2/5km) x 연월(60개월)
-    output/geo_room_capacity_dong_detail.csv - 시설/업체 행정동 배정 상세
+    output/대시보드_보조데이터/geo_room_capacity.csv         - 방법(radius_1/2/5km|dong) x 기간(P1~P4)
+    output/대시보드_보조데이터/geo_room_capacity_monthly.csv - 방법(radius_1/2/5km) x 연월(60개월)
+    output/대시보드_보조데이터/geo_room_capacity_dong_detail.csv - 시설/업체 행정동 배정 상세
 
 한계(명시):
   - 좌표 결측 9.8%(5,774건)는 분석에서 빠짐 — 이만큼 과소추정 가능성.
@@ -55,8 +55,8 @@ from shapely.strtree import STRtree
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
-OUT = ROOT / "output"
-OUT.mkdir(exist_ok=True)
+OUT = ROOT / "output" / "대시보드_보조데이터"
+OUT.mkdir(parents=True, exist_ok=True)
 
 CRS_LODGING = "EPSG:5174"
 CRS_DONG = "EPSG:5186"

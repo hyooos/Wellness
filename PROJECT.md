@@ -25,8 +25,8 @@
 
 - 입력: `data/한국관광데이터랩 데이터 통합.zip`
 - 실행: `./venv/bin/python scripts/analyze_four_sites_by_designation.py`
-- 출력: `output/four_sites_by_designation/`
-- 산출물 해설: `output/four_sites_by_designation/data_quality.csv`
+- 출력: `output/4개_웰니스관광지_성과분석/`
+- 산출물 해설: `output/4개_웰니스관광지_성과분석/data_quality.csv`
 
 원본 ZIP은 Git 용량·보안 관리를 위해 저장소에 커밋하지 않고 로컬 `data/`에서 읽는다. ZIP 내부 한글 파일명은 CP437로 잘못 표시될 수 있어 코드에서 UTF-8로 복원한다.
 
@@ -69,9 +69,9 @@
 ## 다음 작업자가 먼저 볼 파일
 
 1. `scripts/analyze_four_sites_by_designation.py`
-2. `output/four_sites_by_designation/period_definitions.csv`
-3. `output/four_sites_by_designation/metric_dictionary.csv`
-4. `output/four_sites_by_designation/data_quality.csv`
+2. `output/4개_웰니스관광지_성과분석/period_definitions.csv`
+3. `output/4개_웰니스관광지_성과분석/metric_dictionary.csv`
+4. `output/4개_웰니스관광지_성과분석/data_quality.csv`
 
 ---
 

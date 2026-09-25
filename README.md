@@ -24,7 +24,13 @@ streamlit run v2.dashboard_monitor_clean.py
 streamlit run v3.dashboard_monitor_map.py
 ```
 
-대시보드는 `output/four_sites_by_designation/`의 CSV 산출물을 읽습니다.
+대시보드는 `output/4개_웰니스관광지_성과분석/`의 CSV 산출물을 읽습니다.
+
+출력 폴더는 다음처럼 구분합니다.
+
+- `4개_웰니스관광지_성과분석`: 현재 네 지역 성과 분석 결과
+- `대시보드_보조데이터`: 주변 숙박시설과 관광 POI 자료
+- `이전_분석결과`: 과거 10개 지역·88개 시설 탐색 결과
 
 ## 데이터 주의사항
 

@@ -12,7 +12,7 @@
     venv/bin/python3 scripts/geo_tourism_density.py
 
 캐시 원칙: (시설, contentTypeId) 조합별로 결과를 `output/
-geo_tourism_density.csv`에 누적 저장한다. 이미 받은 조합은 재호출하지
+대시보드_보조데이터/geo_tourism_density.csv`에 누적 저장한다. 이미 받은 조합은 재호출하지
 않아, 무료 계정 일일 호출 한도(1,000회/일)를 넘으면 다음 날 이어서
 실행할 수 있다.
 
@@ -36,8 +36,8 @@ from pathlib import Path
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "output"
-OUT.mkdir(exist_ok=True)
+OUT = ROOT / "output" / "대시보드_보조데이터"
+OUT.mkdir(parents=True, exist_ok=True)
 CACHE_CSV = OUT / "geo_tourism_density.csv"
 
 API_BASE = "https://apis.data.go.kr/B551011/KorService2/locationBasedList2"

@@ -1,7 +1,7 @@
 """4개 웰니스 관광지를 최초 지정연도 기준 P1~P4로 분석한다.
 
 입력: data/한국관광데이터랩 데이터 통합.zip
-출력: output/four_sites_by_designation/
+출력: output/4개_웰니스관광지_성과분석/
 
 P3는 공식 신규선정 발표월부터 12개월이며, P1·P2·P4도 같은 월 경계로
 앞뒤 12개월씩 배치한다. 네 지역 모두 4월부터 다음 해 3월까지가 한 기간이다.
@@ -23,7 +23,7 @@ from scipy.stats import norm
 
 ROOT = Path(__file__).resolve().parent.parent
 INPUT_ZIP = ROOT / "data" / "한국관광데이터랩 데이터 통합.zip"
-OUT = ROOT / "output" / "four_sites_by_designation"
+OUT = ROOT / "output" / "4개_웰니스관광지_성과분석"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import analyze_2024_three_sites as base  # noqa: E402
 

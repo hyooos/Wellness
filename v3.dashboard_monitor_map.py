@@ -23,14 +23,14 @@ st.set_page_config(
 )
 
 ROOT = Path(__file__).resolve().parent
-DATA_DIR = ROOT / "output" / "four_sites_by_designation"
+DATA_DIR = ROOT / "output" / "4개_웰니스관광지_성과분석"
 BOUNDARY_PATH = ROOT / "assets" / "skorea-provinces-geo.json"
 MUNICIPAL_BOUNDARY_PATH = ROOT / "assets" / "jeolla-municipalities-geo.json"
 SITE_IMAGES = {
-    "전북무주": ROOT / "무주태권도원.jpg",
-    "전남완도": ROOT / "완도해양치유센터.jpg",
-    "전북순창": ROOT / "순창쉴랜드.jpg",
-    "전북완주": ROOT / "완주아원고택.jpg",
+    "전북무주": ROOT / "웰니스관광지_사진" / "무주태권도원.jpg",
+    "전남완도": ROOT / "웰니스관광지_사진" / "완도해양치유센터.jpg",
+    "전북순창": ROOT / "웰니스관광지_사진" / "순창쉴랜드.jpg",
+    "전북완주": ROOT / "웰니스관광지_사진" / "완주아원고택.jpg",
 }
 PERIODS = ["P1", "P2", "P3", "P4"]
 PERIOD_SHORT = {"P1": "선정 2년 전", "P2": "선정 직전 1년", "P3": "선정 후 1년", "P4": "선정 후 2년"}
@@ -248,8 +248,8 @@ def load_data() -> dict[str, pd.DataFrame]:
         "periods": DATA_DIR / "period_definitions.csv",
         "its": DATA_DIR / "its_designation_hac3.csv",
         "its_robustness": DATA_DIR / "its_robustness.csv",
-        "poi": ROOT / "output" / "geo_tourism_density.csv",
-        "nearest": ROOT / "output" / "geo_nearest_lodging.csv",
+        "poi": ROOT / "output" / "대시보드_보조데이터" / "geo_tourism_density.csv",
+        "nearest": ROOT / "output" / "대시보드_보조데이터" / "geo_nearest_lodging.csv",
     }
     return {name: csv(path, path.stat().st_mtime_ns) for name, path in files.items()}
 

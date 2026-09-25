@@ -19,7 +19,7 @@ st.set_page_config(
 )
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "output" / "four_sites_by_designation"
+DATA_DIR = BASE_DIR / "output" / "4개_웰니스관광지_성과분석"
 
 PERIODS = ["P1", "P2", "P3", "P4"]
 PERIOD_LABELS = {

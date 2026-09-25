@@ -19,7 +19,7 @@ st.set_page_config(
 )
 
 ROOT = Path(__file__).resolve().parent
-DATA_DIR = ROOT / "output" / "four_sites_by_designation"
+DATA_DIR = ROOT / "output" / "4개_웰니스관광지_성과분석"
 PERIODS = ["P1", "P2", "P3", "P4"]
 PERIOD_SHORT = {"P1": "지정 2년 전", "P2": "지정 직전", "P3": "지정 1년차", "P4": "지정 2년차"}
 
@@ -183,9 +183,9 @@ def load_data() -> dict[str, pd.DataFrame]:
         "spatial": DATA_DIR / "spatial_concentration_available_sites.csv",
         "market": DATA_DIR / "market_alignment_conditional_available_sites.csv",
         "availability": DATA_DIR / "data_availability.csv",
-        "poi": ROOT / "output" / "geo_tourism_density.csv",
-        "nearest": ROOT / "output" / "geo_nearest_lodging.csv",
-        "rooms": ROOT / "output" / "geo_room_capacity.csv",
+        "poi": ROOT / "output" / "대시보드_보조데이터" / "geo_tourism_density.csv",
+        "nearest": ROOT / "output" / "대시보드_보조데이터" / "geo_nearest_lodging.csv",
+        "rooms": ROOT / "output" / "대시보드_보조데이터" / "geo_room_capacity.csv",
     }
     return {name: csv(path) for name, path in files.items()}
 

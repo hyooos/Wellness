@@ -211,9 +211,9 @@ RoomSupply_{g,t} = Σ_{i ∈ g} Rooms_i × Active_{i,t}
 
 | 파일 | 내용 |
 |---|---|
-| `output/geo_room_capacity.csv` | 88개소 × 4가지 방법 × P1~P4, 160행 |
-| `output/geo_room_capacity_monthly.csv` | 88개소 × 3가지 반경 × 60개월, 20,768행 |
-| `output/geo_room_capacity_dong_detail.csv` | 시설별 행정동 배정 상세 |
+| `output/대시보드_보조데이터/geo_room_capacity.csv` | 88개소 × 4가지 방법 × P1~P4, 160행 |
+| `output/대시보드_보조데이터/geo_room_capacity_monthly.csv` | 88개소 × 3가지 반경 × 60개월, 20,768행 |
+| `output/대시보드_보조데이터/geo_room_capacity_dong_detail.csv` | 시설별 행정동 배정 상세 |
 
 ---
 

@@ -9,10 +9,10 @@
     /home/leafnode55/tour/venv/bin/python3 scripts/run_summary.py
 
 출력:
-    output/summary_visitors.csv        - 외지인 방문자수 P1~P4, g0/g1/g2
-    output/summary_stay.csv            - 체류시간·숙박방문자비율 P1~P4, g0/g1/g2
-    output/summary_consumption.csv     - 관광소비(내국인) P1~P4, g0/g1/g2
-    output/summary_lodging_category.csv- 숙박업 지출비중 1년차/2년차 증감
+    output/이전_분석결과/summary_visitors.csv        - 외지인 방문자수 P1~P4, g0/g1/g2
+    output/이전_분석결과/summary_stay.csv            - 체류시간·숙박방문자비율 P1~P4, g0/g1/g2
+    output/이전_분석결과/summary_consumption.csv     - 관광소비(내국인) P1~P4, g0/g1/g2
+    output/이전_분석결과/summary_lodging_category.csv- 숙박업 지출비중 1년차/2년차 증감
 
 주의: 데이터랩 원자료는 다운로드 시점에 따라 기준연월 경계가 조금씩
 다르게 잘려 있을 수 있어(§3-3), months_in()으로 정의한 P1~P4 월 목록에
@@ -34,8 +34,8 @@ from wellness_pipeline import (  # noqa: E402
     load_stay_series, load_visitor_series, period_mean, period_sum,
 )
 
-OUT = Path(__file__).resolve().parent.parent / "output"
-OUT.mkdir(exist_ok=True)
+OUT = Path(__file__).resolve().parent.parent / "output" / "이전_분석결과"
+OUT.mkdir(parents=True, exist_ok=True)
 
 ALL_REGIONS = COHORT_2023 + COHORT_2024
 

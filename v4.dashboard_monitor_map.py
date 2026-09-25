@@ -21,7 +21,7 @@ st.set_page_config(
 )
 
 ROOT = Path(__file__).resolve().parent
-DATA_DIR = ROOT / "output" / "four_sites_by_designation"
+DATA_DIR = ROOT / "output" / "4개_웰니스관광지_성과분석"
 BOUNDARY_PATH = ROOT / "assets" / "skorea-provinces-geo.json"
 MUNICIPAL_BOUNDARY_PATH = ROOT / "assets" / "jeolla-municipalities-geo.json"
 SITE_IMAGE_NAMES = {
@@ -373,8 +373,8 @@ def load_data() -> dict[str, pd.DataFrame]:
         "its_robustness": DATA_DIR / "its_robustness.csv",
         "spread": DATA_DIR / "spatial_relative_growth_available_sites.csv",
         "site_catalog": ROOT / "wellness_88_geocoded.csv",
-        "poi": ROOT / "output" / "geo_tourism_density.csv",
-        "nearest": ROOT / "output" / "geo_nearest_lodging.csv",
+        "poi": ROOT / "output" / "대시보드_보조데이터" / "geo_tourism_density.csv",
+        "nearest": ROOT / "output" / "대시보드_보조데이터" / "geo_nearest_lodging.csv",
     }
     return {name: csv(path, path.stat().st_mtime_ns) for name, path in files.items()}
 
@@ -492,7 +492,7 @@ def month_text(value: object) -> str:
 
 
 def site_image(region: str) -> Image.Image | None:
-    for folder in (ROOT, ROOT / "assets"):
+    for folder in (ROOT / "웰니스관광지_사진", ROOT, ROOT / "assets"):
         path = folder / SITE_IMAGE_NAMES[region]
         if path.exists():
             with Image.open(path) as source:

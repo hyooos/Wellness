@@ -22,8 +22,8 @@ import pandas as pd
 from scipy.stats import mannwhitneyu
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "output"
-OUT.mkdir(exist_ok=True)
+OUT = ROOT / "output" / "이전_분석결과"
+OUT.mkdir(parents=True, exist_ok=True)
 
 SIDO_MAP = {
     "서울": "서울특별시", "부산": "부산광역시", "대구": "대구광역시", "인천": "인천광역시",
@@ -139,7 +139,7 @@ def part_b_site10(ldf: pd.DataFrame) -> pd.DataFrame:
         rows.append(row)
     out = pd.DataFrame(rows)
     out.to_csv(OUT / "lodging_site10_supply.csv", index=False, encoding="utf-8-sig")
-    print("[B] output/lodging_site10_supply.csv 저장 완료")
+    print("[B] output/이전_분석결과/lodging_site10_supply.csv 저장 완료")
     return out
 
 
@@ -159,7 +159,7 @@ def part_c_dong5(ldf: pd.DataFrame) -> pd.DataFrame:
         rows.append(row)
     out = pd.DataFrame(rows)
     out.to_csv(OUT / "lodging_dong5_supply.csv", index=False, encoding="utf-8-sig")
-    print("[C] output/lodging_dong5_supply.csv 저장 완료 (2023 코호트만 — 2024 코호트는 로컬에 행정동 데이터 없음)")
+    print("[C] output/이전_분석결과/lodging_dong5_supply.csv 저장 완료 (2023 코호트만 — 2024 코호트는 로컬에 행정동 데이터 없음)")
     return out
 
 
