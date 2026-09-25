@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { geoMercator, geoPath } from "d3-geo";
 import {
-  CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  CartesianGrid, Legend, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 
 const PERIODS = ["P1", "P2", "P3", "P4"];
@@ -27,7 +27,7 @@ const INTERVALS = {
   immediate: { label: "지정 직후", before: "P2", after: "P3", growth: "g23_pct", point: "delta23_pctp", status: "지정직후_판정_3pct" },
   second: { label: "2년차", before: "P3", after: "P4", growth: "g34_pct", point: "delta34_pctp", status: "2년차_판정_3pct" },
 };
-const COLORS = { 관심: "#8fa39a", 방문: "#3f6fa8", 숙박: "#c8932b", 체류: "#2f8f6b", 소비: "#8c5bb5" };
+const COLORS = { 관심: "#789184", 방문: "#4f7f91", 숙박: "#bd8a45", 체류: "#2f8f6b", 소비: "#916f83" };
 
 function finite(value) { return typeof value === "number" && Number.isFinite(value); }
 function formatLevel(value, metric) {
@@ -116,7 +116,7 @@ function StageFlow({ data, selected, intervalKey }) {
       const isBottleneck = site.bottleneck.includes(stage);
       const before = data.kpi.find(r => r.지역키 === selected && r.기간 === interval.before)?.[metric];
       const after = data.kpi.find(r => r.지역키 === selected && r.기간 === interval.after)?.[metric];
-      return <div className="stage-wrap" key={stage}>
+      return <div className={`stage-wrap ${isBottleneck ? "bottleneck-wrap" : ""}`} key={stage}>
         <div className={`stage-card ${cls} ${isBottleneck ? "bottleneck" : ""}`}>
           {isBottleneck && <div className="bneck-band">핵심 병목</div>}
           <div className="stage-top"><span>{stage}</span><em>{source}</em></div><div className="stage-change-row"><strong>{arrow} {formatChange(change, metric)}</strong><span className={`status-chip ${cls}`}>{label}</span></div>
@@ -178,20 +178,28 @@ function FlowChart({ data, selected }) {
     STAGES.forEach(([stage, metric]) => { row[stage] = finite(source?.[metric]) && base?.[metric] ? source[metric] / base[metric] * 100 : null; });
     return row;
   });
-  return <div className="chart-box"><ResponsiveContainer width="100%" height={330}><LineChart data={rows} margin={{ top: 12, right: 24, left: 0, bottom: 8 }}>
+  return <div className="chart-box"><ResponsiveContainer width="100%" height={330}><LineChart data={rows} margin={{ top: 18, right: 24, left: 0, bottom: 8 }}>
     <CartesianGrid stroke="#e4ece7" vertical={false} /><XAxis dataKey="period" tick={{ fill: "#61766b", fontSize: 12 }} /><YAxis tick={{ fill: "#61766b", fontSize: 12 }} domain={["auto", "auto"]} unit="" />
-    <Tooltip formatter={(v) => `${Number(v).toFixed(1)}`} /><Legend />
-    {STAGES.map(([stage]) => <Line key={stage} type="monotone" dataKey={stage} stroke={COLORS[stage]} strokeWidth={data.sites[selected].bottleneck.includes(stage) ? 4 : 2} dot={{ r: 4 }} />)}
+    <ReferenceArea x1="지정 1년차" x2="지정 2년차" fill="#2f8f6b" fillOpacity={.055} />
+    <ReferenceLine y={100} stroke="#aebdb5" strokeDasharray="4 5" />
+    <Tooltip formatter={(v) => `${Number(v).toFixed(1)}`} contentStyle={{ borderColor: "#dce7e0", borderRadius: 10, boxShadow: "0 8px 22px rgba(31,67,51,.1)" }} /><Legend iconType="circle" />
+    {STAGES.map(([stage]) => { const bottleneck = data.sites[selected].bottleneck.includes(stage); return <Line key={stage} type="monotone" dataKey={stage} stroke={bottleneck ? "#d2513a" : COLORS[stage]} strokeWidth={bottleneck ? 4.5 : 2.2} strokeOpacity={bottleneck ? 1 : .78} dot={{ r: bottleneck ? 5 : 3.5, fill: bottleneck ? "#d2513a" : COLORS[stage], strokeWidth: 0 }} activeDot={{ r: 6 }} />; })}
   </LineChart></ResponsiveContainer></div>;
+}
+
+function DesignationLabel({ viewBox }) {
+  if (!viewBox) return null;
+  const x = (viewBox.x || 0) + 7, y = (viewBox.y || 0) + 7;
+  return <g pointerEvents="none"><rect x={x} y={y} width="58" height="23" rx="7" fill="#14261e" /><text x={x + 29} y={y + 15} fill="#fff" fontSize="11" fontWeight="750" textAnchor="middle">지정 시점</text></g>;
 }
 
 function MonthlyChart({ data, selected, metric }) {
   const rows = data.monthly.filter(r => r.지역키 === selected).map(r => ({ month: String(r.기준년월), value: r[metric] }));
   const intervention = String(data.its.find(r => r.지역키 === selected)?.개입시작월 || "");
-  return <div className="chart-box"><ResponsiveContainer width="100%" height={330}><LineChart data={rows} margin={{ top: 12, right: 26, left: 2, bottom: 8 }}>
+  return <div className="chart-box"><ResponsiveContainer width="100%" height={330}><LineChart data={rows} margin={{ top: 28, right: 82, left: 2, bottom: 8 }}>
     <CartesianGrid stroke="#e4ece7" vertical={false} /><XAxis dataKey="month" interval={5} tickFormatter={v => `${String(v).slice(2, 4)}.${String(v).slice(4)}`} tick={{ fill: "#61766b", fontSize: 11 }} />
     <YAxis tick={{ fill: "#61766b", fontSize: 11 }} width={54} /><Tooltip labelFormatter={v => `${String(v).slice(0, 4)}.${String(v).slice(4)}`} formatter={v => formatLevel(Number(v), metric)} />
-    <ReferenceLine x={intervention} stroke="#d2513a" strokeDasharray="5 5" label={{ value: "지정", fill: "#d2513a", fontSize: 11 }} />
+    <ReferenceLine x={intervention} stroke="#d2513a" strokeWidth={1.5} strokeDasharray="5 5" label={<DesignationLabel />} />
     <Line type="monotone" dataKey="value" name={LABEL[metric]} stroke="#2f8f6b" strokeWidth={2.5} dot={false} />
   </LineChart></ResponsiveContainer></div>;
 }
@@ -213,7 +221,7 @@ export default function Dashboard() {
     return { stage, metric: m, y1: row?.g23_pct, y2: kpi("P2", m) && kpi("P4", m) ? (kpi("P4", m) / kpi("P2", m) - 1) * 100 : null, isDown: row?.지정직후_판정_3pct === "DOWN" };
   }).filter(r => r.isDown && finite(r.y1));
   const its = data.its.find(r => r.지역키 === selected && r.지표 === metric);
-  const tabs = [["flow", "흐름 추이"], ["its", "지정 시점 확인"], ["wellness", "웰니스 지표"], ["market", "방문 출발지·주변 환경"], ["table", "네 구간 값 표"], ["quality", "데이터 신뢰도"]];
+  const tabs = [["flow", "흐름 추이"], ["its", "지정 시점 확인"], ["wellness", "웰니스 지표"], ["market", "방문 출발지·주변 환경"], ["table", "기간별 수치 비교"], ["quality", "데이터 신뢰도"]];
 
   return <main>
     <header className="topbar"><div className="brand"><b>WELL-FLOW <span>Monitor</span></b><p>웰니스 관광지 성과 진단</p></div><div className="top-meta">{site.region} 분석기간 · {ym(period.P1.시작월)}–{ym(period.P4.종료월)} · 지정월 기준</div></header>
