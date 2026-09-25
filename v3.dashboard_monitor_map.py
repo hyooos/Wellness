@@ -23,7 +23,7 @@ st.set_page_config(
 )
 
 ROOT = Path(__file__).resolve().parent
-DATA_DIR = ROOT / "output" / "five_sites_by_designation"
+DATA_DIR = ROOT / "output" / "four_sites_by_designation"
 BOUNDARY_PATH = ROOT / "assets" / "skorea-provinces-geo.json"
 MUNICIPAL_BOUNDARY_PATH = ROOT / "assets" / "jeolla-municipalities-geo.json"
 SITE_IMAGES = {

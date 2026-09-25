@@ -1,4 +1,4 @@
-"""Readable 3x3 WELL-FLOW monitor for five wellness tourism sites."""
+"""Readable 3x3 WELL-FLOW monitor for four wellness tourism sites."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ st.set_page_config(
 )
 
 ROOT = Path(__file__).resolve().parent
-DATA_DIR = ROOT / "output" / "five_sites_by_designation"
+DATA_DIR = ROOT / "output" / "four_sites_by_designation"
 PERIODS = ["P1", "P2", "P3", "P4"]
 PERIOD_SHORT = {"P1": "지정 2년 전", "P2": "지정 직전", "P3": "지정 1년차", "P4": "지정 2년차"}
 
@@ -182,7 +182,6 @@ def load_data() -> dict[str, pd.DataFrame]:
         "origin": DATA_DIR / "mobility_origin_by_period.csv",
         "spatial": DATA_DIR / "spatial_concentration_available_sites.csv",
         "market": DATA_DIR / "market_alignment_conditional_available_sites.csv",
-        "market_legacy": DATA_DIR / "market_alignment_legacy_wanju_from_previous_p_extract.csv",
         "availability": DATA_DIR / "data_availability.csv",
         "poi": ROOT / "output" / "geo_tourism_density.csv",
         "nearest": ROOT / "output" / "geo_nearest_lodging.csv",
@@ -295,7 +294,7 @@ def trend_chart(region_key: str) -> go.Figure:
 
 
 with st.sidebar:
-    st.markdown('<div class="sidebar-title">시설 선택</div><div class="sidebar-note">5개 웰니스 관광지</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-title">시설 선택</div><div class="sidebar-note">4개 웰니스 관광지</div>', unsafe_allow_html=True)
     if "monitor_site" not in st.session_state:
         st.session_state.monitor_site = SITES.iloc[0]["지역키"]
     site_labels = {
@@ -467,8 +466,6 @@ with c5:
             st.markdown('<div class="measure-note">이동통신 거주지 기준 · 거리구간은 원자료 미확보</div>', unsafe_allow_html=True)
         else:
             market = DATA["market"]
-            if selected_key == "전북완주":
-                market = DATA["market_legacy"]
             m = market.loc[market["지역키"].eq(selected_key) & market["기간"].eq(display_period)]
             if not m.empty:
                 rho = float(m.iloc[0]["조건부_Spearman_rho"])

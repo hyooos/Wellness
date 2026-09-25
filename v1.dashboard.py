@@ -1,4 +1,4 @@
-"""WELL-FLOW: five-site wellness tourism performance dashboard."""
+"""WELL-FLOW: four-site wellness tourism performance dashboard."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ st.set_page_config(
 )
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "output" / "five_sites_by_designation"
+DATA_DIR = BASE_DIR / "output" / "four_sites_by_designation"
 
 PERIODS = ["P1", "P2", "P3", "P4"]
 PERIOD_LABELS = {
@@ -145,11 +145,9 @@ def load_data() -> dict[str, pd.DataFrame]:
         "not_computable_status.csv",
         "period_definitions.csv",
         "market_alignment_conditional_available_sites.csv",
-        "market_alignment_legacy_wanju_from_previous_p_extract.csv",
         "spatial_concentration_available_sites.csv",
         "spatial_change_available_sites.csv",
         "spatial_relative_growth_available_sites.csv",
-        "spatial_legacy_wanju_from_previous_p_extract.csv",
         "spatial_mobility_only.csv",
         "mobility_origin_by_period.csv",
     ]
@@ -573,9 +571,7 @@ with why_tab:
     st.markdown("## 변화의 배경")
     st.caption("시장 · 공간 · 소비 업종")
 
-    market_current = DATA["market_alignment_conditional_available_sites"].copy()
-    market_legacy = DATA["market_alignment_legacy_wanju_from_previous_p_extract"].copy()
-    market = pd.concat([market_current, market_legacy], ignore_index=True, sort=False)
+    market = DATA["market_alignment_conditional_available_sites"].copy()
     market_region = market.loc[market["지역키"].eq(why_region)].copy()
     market_col, spatial_col = st.columns(2)
     with market_col:
@@ -641,39 +637,11 @@ with why_tab:
                 config={"displayModeBar": False},
             )
             st.caption("일치도는 높을수록, 간격은 낮을수록 유사합니다.")
-            if why_region == "전북완주":
-                st.warning("완주: 이전 P구간 산출물")
-
-    spatial_current = DATA["spatial_concentration_available_sites"].copy()
-    legacy = DATA["spatial_legacy_wanju_from_previous_p_extract"].copy()
-    if "원표" in legacy:
-        legacy = legacy.loc[legacy["원표"].eq("spatial_concentration.csv")]
-    spatial = pd.concat([spatial_current, legacy[spatial_current.columns]], ignore_index=True, sort=False)
+    spatial = DATA["spatial_concentration_available_sites"].copy()
     spatial_region = spatial.loc[spatial["지역키"].eq(why_region)].copy()
-    mobile = DATA["spatial_mobility_only"].copy()
-    mobile_region = mobile.loc[mobile["지역키"].eq(why_region)].copy()
     with spatial_col:
         st.markdown("### 시설지역 비중")
-        if not mobile_region.empty:
-            st.caption("이동통신 방문자료 · 소비 자료 없음")
-            fig = px.line(
-                mobile_region,
-                x="기간",
-                y="시설동_점유율_pct",
-                markers=True,
-                color_discrete_sequence=["#0F766E"],
-            )
-            fig.update_traces(line=dict(width=3), marker=dict(size=8), fill="tozeroy", fillcolor="rgba(15,118,110,.10)")
-            fig.update_yaxes(title="시설 읍면동 방문 비중", ticksuffix="%")
-            fig.update_xaxes(title="")
-            st.plotly_chart(
-                chart_layout(fig, 350),
-                width="stretch",
-                key="mobility_share",
-                config={"displayModeBar": False},
-            )
-            st.caption("군 전체 방문자 대비 시설 읍면동 방문자 비중")
-        elif spatial_region.empty:
+        if spatial_region.empty:
             st.info(f"공간 분석 {coverage_badge(why_region, '읍면동 공간파급')}")
         else:
             selected_domain = st.radio("영역", ["방문", "소비"], horizontal=True, key="spatial_domain")
@@ -696,8 +664,6 @@ with why_tab:
             )
             place = spatial_view["시설소재_읍면동"].dropna().iloc[0]
             st.caption(f"{place} 비중 · 상승 시 시설 주변 집중 확대")
-            if why_region == "전북완주":
-                st.warning("완주: 이전 P구간 산출물")
 
     st.markdown("### 소비 업종")
     category = DATA["category_change"]

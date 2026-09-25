@@ -5,7 +5,7 @@
 
 ## WELL-FLOW 대시보드
 
-장성을 제외한 4개 지역의 선정 전후 흐름을 한눈에 보고, 관심·방문·숙박·체류·소비 단계를 눌러
+4개 지역의 선정 전후 흐름을 한눈에 보고, 관심·방문·숙박·체류·소비 단계를 눌러
 세부 변화를 확인할 수 있습니다.
 
 ```bash
@@ -24,22 +24,7 @@ streamlit run v2.dashboard_monitor_clean.py
 streamlit run v3.dashboard_monitor_map.py
 ```
 
-대시보드는 `output/five_sites_by_designation/`의 CSV 산출물을 읽습니다.
-
-## 2024년 선정 3개소 Tier 1 분석
-
-분석 대상은 완도 해양치유센터, 순창 쉴랜드, 완주 아원고택입니다.
-
-```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python scripts/analyze_2024_three_sites.py
-```
-
-- 방법론 및 결과: `2024_웰니스관광지_3개소_Tier1_분석결과.md`
-- 계산 가이드: `2024_웰니스관광지_3개소_지표계산_가이드.md`
-- 재현 결과: `output/2024_three_sites/`
+대시보드는 `output/four_sites_by_designation/`의 CSV 산출물을 읽습니다.
 
 ## 데이터 주의사항
 

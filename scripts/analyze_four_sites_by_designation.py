@@ -1,13 +1,12 @@
-"""5개 웰니스 관광지를 최초 지정연도 기준 P1~P4로 분석한다.
+"""4개 웰니스 관광지를 최초 지정연도 기준 P1~P4로 분석한다.
 
 입력: data/한국관광데이터랩 데이터 통합.zip
-출력: output/five_sites_by_designation/
+출력: output/four_sites_by_designation/
 
 P3는 공식 신규선정 발표월부터 12개월이며, P1·P2·P4도 같은 월 경계로
-앞뒤 12개월씩 배치한다. 장성은 2020.06, 나머지 지역은 4월이 기준이다.
+앞뒤 12개월씩 배치한다. 네 지역 모두 4월부터 다음 해 3월까지가 한 기간이다.
 
-연간 KPI는 12개월이 모두 관측된 경우에만 계산한다. 특히 장성군의
-숙박·체류 원자료는 2020.01부터라 P1 및 완전한 P2를 만들 수 없다.
+연간 KPI는 12개월이 모두 관측된 경우에만 계산한다.
 """
 from __future__ import annotations
 
@@ -24,13 +23,12 @@ from scipy.stats import norm
 
 ROOT = Path(__file__).resolve().parent.parent
 INPUT_ZIP = ROOT / "data" / "한국관광데이터랩 데이터 통합.zip"
-OUT = ROOT / "output" / "five_sites_by_designation"
+OUT = ROOT / "output" / "four_sites_by_designation"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import analyze_2024_three_sites as base  # noqa: E402
 
 
 SITES = {
-    "전남장성": {"region": "장성군", "site": "국립장성숲체원", "dong": "북이면", "year": 2020, "month": 6, "announcement": "2020-06-10"},
     "전북무주": {"region": "무주군", "site": "태권도원 상징지구", "dong": "설천면", "year": 2022, "month": 4, "announcement": "2022-04-19"},
     "전남완도": {"region": "완도군", "site": "완도 해양치유센터", "dong": "신지면", "year": 2024, "month": 4, "announcement": "2024-04-24"},
     "전북순창": {"region": "순창군", "site": "쉴랜드", "dong": "인계면", "year": 2024, "month": 4, "announcement": "2024-04-24"},
@@ -357,47 +355,142 @@ def category_change(z: IntegratedZip) -> pd.DataFrame:
 
 
 def exact_period_auxiliary(z: IntegratedZip, kpis: pd.DataFrame):
-    exact = {f"{a}-{b}": p for p, (a, b) in period_bounds(2024).items()}
     card = add_identity(z.read("신용카드/지역별지출액.csv"))
-    exact_keys = set(card.loc[card["기준기간"].isin(exact), "지역키"])
-    # 통합 ZIP에서 완도·순창만 네 P구간이 정확히 제공된다. 완주는 달력연도뿐이다.
-    cohort = {k: v for k, v in SITES.items() if v["year"] == 2024 and k in exact_keys}
-    card = card[card["지역키"].isin(cohort) & card["국적구분"].eq("내국인") & card["기준기간"].isin(exact)]
-    card["기간"] = card["기준기간"].map(exact)
     visit = add_identity(z.read("이동통신/지역별방문자수.csv"))
-    visit = visit[visit["지역키"].isin(cohort) & visit["국적구분"].eq("내국인") & visit["기준기간"].isin(exact)]
-    visit["기간"] = visit["기준기간"].map(exact)
-    card_dongs = {k: card[card["지역키"].eq(k)][["기간", "지출지역명", "지출비율"]].rename(columns={"지출지역명": "읍면동", "지출비율": "점유율_pct"}) for k in cohort}
-    visit_dongs = {k: visit[visit["지역키"].eq(k)][["기간", "하위지역명", "방문자수"]].rename(columns={"하위지역명": "읍면동"}) for k in cohort}
-
     actual = add_identity(z.read("이동통신/방문자거주지및유출지.csv"))
-    actual = actual[actual["지역키"].isin(cohort) & actual["국적구분"].eq("내국인") & actual["기준기간"].isin(exact)]
-    actual["기간"] = actual["기준기간"].map(exact)
     search = add_identity(z.read("숙박체류/숙박목적지유입.csv"))
-    search = search[search["지역키"].isin(cohort) & search["기준기간"].isin(exact)]
-    search["기간"] = search["기준기간"].map(exact)
-    actual_all = {k: actual[actual["지역키"].eq(k)][["기간", "상대지역시도", "상대지역시군구", "비율"]].rename(columns={"상대지역시도": "광역", "상대지역시군구": "기초", "비율": "점유율_pct"}) for k in cohort}
-    search_all = {k: search[search["지역키"].eq(k)][["기간", "유입시도", "유입시군구", "거주방문자비율"]].rename(columns={"유입시도": "광역", "유입시군구": "기초", "거주방문자비율": "조건부점유율_pct"}) for k in cohort}
+
+    concentration_parts, change_parts, relative_parts, alignment_parts = [], [], [], []
     original_sites, original_periods = base.SITES, base.PERIODS
     try:
-        base.SITES, base.PERIODS = cohort, period_bounds(2024)
-        concentration, spatial_change, relative = base.spatial_tables(kpis[kpis["지역키"].isin(cohort)], card_dongs, visit_dongs)
-        alignment = base.conditional_alignment(actual_all, search_all)
+        for key, meta in SITES.items():
+            bounds = period_bounds(meta["year"], meta["month"])
+            exact = {f"{start}-{end}": period for period, (start, end) in bounds.items()}
+
+            site_card = card[
+                card["지역키"].eq(key)
+                & card["국적구분"].eq("내국인")
+                & card["기준기간"].isin(exact)
+            ].copy()
+            site_card["기간"] = site_card["기준기간"].map(exact)
+            site_visit = visit[
+                visit["지역키"].eq(key)
+                & visit["국적구분"].eq("내국인")
+                & visit["기준기간"].isin(exact)
+            ].copy()
+            site_visit["기간"] = site_visit["기준기간"].map(exact)
+            site_actual = actual[
+                actual["지역키"].eq(key)
+                & actual["국적구분"].eq("내국인")
+                & actual["기준기간"].isin(exact)
+            ].copy()
+            site_actual["기간"] = site_actual["기준기간"].map(exact)
+            site_search = search[
+                search["지역키"].eq(key) & search["기준기간"].isin(exact)
+            ].copy()
+            site_search["기간"] = site_search["기준기간"].map(exact)
+
+            observed = {
+                "소비": set(site_card["기간"].dropna()),
+                "방문": set(site_visit["기간"].dropna()),
+                "방문유입": set(site_actual["기간"].dropna()),
+                "검색유입": set(site_search["기간"].dropna()),
+            }
+            missing = {name: set(PERIOD_NAMES) - periods for name, periods in observed.items()}
+            if missing["소비"] or missing["방문"]:
+                raise ValueError(f"{key}: 지정기간 읍면동 자료 누락 {missing}")
+
+            cohort = {key: meta}
+            card_dongs = {key: site_card[["기간", "지출지역명", "지출비율"]].rename(
+                columns={"지출지역명": "읍면동", "지출비율": "점유율_pct"}
+            )}
+            visit_dongs = {key: site_visit[["기간", "하위지역명", "방문자수"]].rename(
+                columns={"하위지역명": "읍면동"}
+            )}
+            base.SITES, base.PERIODS = cohort, bounds
+            concentration, spatial_change, relative = base.spatial_tables(
+                kpis[kpis["지역키"].eq(key)], card_dongs, visit_dongs
+            )
+            concentration_parts.append(concentration)
+            change_parts.append(spatial_change)
+            relative_parts.append(relative)
+            if not missing["방문유입"] and not missing["검색유입"]:
+                actual_all = {key: site_actual[["기간", "상대지역시도", "상대지역시군구", "비율"]].rename(
+                    columns={"상대지역시도": "광역", "상대지역시군구": "기초", "비율": "점유율_pct"}
+                )}
+                search_all = {key: site_search[["기간", "유입시도", "유입시군구", "거주방문자비율"]].rename(
+                    columns={"유입시도": "광역", "유입시군구": "기초", "거주방문자비율": "조건부점유율_pct"}
+                )}
+                alignment_parts.append(base.conditional_alignment(actual_all, search_all))
     finally:
         base.SITES, base.PERIODS = original_sites, original_periods
-    return concentration, spatial_change, relative, alignment
+
+    return tuple(
+        pd.concat(parts, ignore_index=True, sort=False)
+        for parts in (concentration_parts, change_parts, relative_parts, alignment_parts)
+    )
+
+
+def mobility_detail_outputs(z: IntegratedZip, kpis: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """대시보드용 시설 소재 읍면동 방문과 방문자 출발지 표를 만든다."""
+    visit = add_identity(z.read("이동통신/지역별방문자수.csv"))
+    origin = add_identity(z.read("이동통신/방문자거주지및유출지.csv"))
+    facility_rows = []
+    origin_parts = []
+
+    for key, meta in SITES.items():
+        bounds = period_bounds(meta["year"], meta["month"])
+        exact = {f"{start}-{end}": period for period, (start, end) in bounds.items()}
+        site_visit = visit[
+            visit["지역키"].eq(key)
+            & visit["국적구분"].eq("내국인")
+            & visit["기준기간"].isin(exact)
+        ].copy()
+        site_visit["기간"] = site_visit["기준기간"].map(exact)
+        site_origin = origin[
+            origin["지역키"].eq(key)
+            & origin["국적구분"].eq("내국인")
+            & origin["기준기간"].isin(exact)
+        ].copy()
+        site_origin["기간"] = site_origin["기준기간"].map(exact)
+        site_origin = site_origin.rename(columns={
+            "상대지역시도": "거주지(시도)", "상대지역시군구": "거주지(시군구)", "비율": "비율(%)"
+        })
+        site_origin["시설소재_읍면동"] = meta["dong"]
+        origin_parts.append(site_origin[[
+            "거주지(시도)", "거주지(시군구)", "비율(%)", "지역키", "지역", "시설", "기간", "시설소재_읍면동"
+        ]])
+
+        for period in PERIOD_NAMES:
+            target = site_visit[
+                site_visit["기간"].eq(period) & site_visit["하위지역명"].eq(meta["dong"])
+            ]
+            if len(target) != 1:
+                raise ValueError(f"{key} {period}: {meta['dong']} 방문자료 {len(target)}행")
+            target = target.iloc[0]
+            county_total = kpis.loc[
+                kpis["지역키"].eq(key) & kpis["기간"].eq(period), "전체방문자수"
+            ].iloc[0]
+            facility_rows.append({
+                "지역키": key, "지역": meta["region"], "시설": meta["site"], "영역": "방문",
+                "기간": period, "시설소재_읍면동": meta["dong"],
+                "시설동_방문자수": target["방문자수"], "시설동_외지인방문자수": np.nan,
+                "시군구_전체방문자수": county_total, "시설동_점유율_pct": target["방문자비율"],
+                "자료범위": "통합 ZIP의 시군구 내 읍면동 방문자 분포; 외지인 세부값 없음",
+            })
+
+    facility = pd.DataFrame(facility_rows).sort_values(["지역키", "기간"])
+    facility["시설동_성장률_pct"] = facility.groupby("지역키")["시설동_방문자수"].pct_change() * 100
+    facility["시군구_성장률_pct"] = facility.groupby("지역키")["시군구_전체방문자수"].pct_change() * 100
+    facility["상대집중도_RC_pctp"] = facility["시설동_성장률_pct"] - facility["시군구_성장률_pct"]
+    facility["시설동_점유율변화_pctp"] = facility.groupby("지역키")["시설동_점유율_pct"].diff()
+    origins = pd.concat(origin_parts, ignore_index=True, sort=False)
+    return facility, origins
 
 
 def status_table() -> pd.DataFrame:
     rows = []
     for key, meta in SITES.items():
-        if key not in ("전남완도", "전북순창"):
-            rows.extend([
-                {"지역키": key, "항목": "읍면동 공간파급", "상태": "NOT_COMPUTABLE", "사유": "원자료가 지정연도 기준 4~3월 P구간이 아닌 달력연도 집계"},
-                {"지역키": key, "항목": "조건부 시장정합도", "상태": "NOT_COMPUTABLE", "사유": "방문·검색 유입 원자료 기간이 지정연도 기준 P구간과 불일치"},
-            ])
-            if key == "전북완주":
-                rows.append({"지역키": key, "항목": "기존 P구간 공간·시장 결과", "상태": "LEGACY_AVAILABLE", "사유": "이전 개별 P구간 원자료로 계산한 검증 결과를 별도 파일로 보존; 현재 통합 ZIP만으로는 재현 불가"})
         rows.append({"지역키": key, "항목": "Shift-Share", "상태": "NOT_COMPUTABLE", "사유": "서로 다른 선정연도의 event-time 자료를 합치면 경기연도가 달라지고 독립 일반관광 benchmark도 없음"})
         rows.extend([
             {"지역키": key, "항목": "LQ", "상태": "NOT_COMPUTABLE", "사유": "독립적인 전남·전북 일반 관광시장 출발지 benchmark 부재"},
@@ -429,40 +522,19 @@ def metric_dictionary() -> pd.DataFrame:
     return pd.DataFrame(rows, columns=["지표", "정의", "연간화_수식"])
 
 
-def legacy_wanju_outputs() -> tuple[pd.DataFrame, pd.DataFrame]:
-    """현재 통합 ZIP에서 빠진 완주 P구간 보조자료의 기존 검증 결과를 이관."""
-    old = ROOT / "output" / "2024_three_sites"
-    spatial_names = ["spatial_concentration.csv", "spatial_change.csv", "spatial_relative_growth.csv"]
-    frames = []
-    for name in spatial_names:
-        frame = pd.read_csv(old / name, encoding="utf-8-sig")
-        frame = frame[frame["지역키"].eq("전북완주")].copy()
-        frame.insert(0, "원표", name)
-        frames.append(frame)
-    spatial = pd.concat(frames, ignore_index=True, sort=False)
-    market = pd.read_csv(old / "market_alignment_conditional_proxy.csv", encoding="utf-8-sig")
-    market = market[market["지역키"].eq("전북완주")].copy()
-    for frame in (spatial, market):
-        frame["자료출처"] = "기존 2024_three_sites 개별 P구간 원자료 산출물"
-        frame["현재통합ZIP_재현가능"] = False
-    return spatial, market
-
-
 def quality_table(monthly: pd.DataFrame, availability: pd.DataFrame) -> pd.DataFrame:
     identity_error = (monthly["전체방문자수"] - monthly["외지인방문자수"] - monthly["현지인방문자수"]).abs().max()
-    jang_missing = availability[(availability["지역키"].eq("전남장성")) & ~availability["연간계산가능"]]
     return pd.DataFrame([
-        {"항목": "기간 매핑", "상태": "OK", "내용": "지역별 공식 신규선정 발표월(장성 2020.06, 나머지 4월)에 따라 P1~P4 각 12개월 배정"},
+        {"항목": "기간 매핑", "상태": "OK", "내용": "지역별 공식 신규선정 발표월(4월)에 따라 P1~P4 각 12개월 배정"},
         {"항목": "내국인 방문자 정의", "상태": "OK", "내용": f"외지인·전체는 국적구분=내국인만 사용; 전체=외지인+현지인 최대 반올림오차 {identity_error:g}"},
         {"항목": "외국인 중복", "상태": "CORRECTED", "내용": "기존 추가폴더처럼 외국인을 외지인/전체에 합산하지 않음"},
-        {"항목": "장성 숙박·체류", "상태": "PARTIAL", "내용": f"2020.01 이전 원자료 부재; 불완전 연간 KPI {len(jang_missing)}개를 NA 처리"},
         {"항목": "연간 완전성", "상태": "STRICT", "내용": "12개월 중 한 달이라도 없으면 합계·가중평균을 계산하지 않음"},
         {"항목": "월합계 주의", "상태": "CAUTION", "내용": "데이터랩 보정·반올림으로 직접 연간조회 값과 미세 차이 가능; 변화율 중심 해석"},
-        {"항목": "ITS 인과성", "상태": "CAUTION", "내용": "대조군이 없어 구조변화 탐색이며 인과효과가 아님; 장성 2020·무주 2022는 코로나 충격과 중첩"},
+        {"항목": "ITS 인과성", "상태": "CAUTION", "내용": "대조군이 없어 구조변화 탐색이며 인과효과가 아님; 무주 P1은 코로나 충격과 중첩"},
         {"항목": "분석단위", "상태": "CAUTION", "내용": "시설 자체가 아니라 시설 소재 시군구 전체 관광시장"},
-        {"항목": "시장정합", "상태": "PROXY", "내용": "2024 코호트만 광역 동일가중 조건부 Spearman/JSD; 전국시장 지표가 아님"},
-        {"항목": "공간분석", "상태": "PARTIAL", "내용": "현재 ZIP에서는 완도·순창만 계산; 완주는 기존 개별 P구간 산출물을 출처표시 후 별도 이관"},
-        {"항목": "Shift-Share", "상태": "EXCLUDED", "내용": "선정연도가 다른 5개소를 event-time으로 합치면 서로 다른 경기연도를 섞으므로 계산하지 않음"},
+        {"항목": "시장정합", "상태": "PROXY", "내용": "4개 지역 모두 지정기간 기준 광역 동일가중 조건부 Spearman/JSD; 전국시장 지표가 아님"},
+        {"항목": "공간분석", "상태": "OK", "내용": "4개 지역 모두 지정기간 기준 읍면동 방문·소비 자료로 계산"},
+        {"항목": "Shift-Share", "상태": "EXCLUDED", "내용": "선정연도가 다른 4개소를 event-time으로 합치면 서로 다른 경기연도를 섞으므로 계산하지 않음"},
     ])
 
 
@@ -471,15 +543,16 @@ def main() -> None:
     z = IntegratedZip(INPUT_ZIP)
     monthly = load_monthly(z)
     counts = monthly.groupby(["지역키", "기간"]).size()
-    if len(monthly) != 240 or not (counts == 12).all():
-        raise AssertionError(f"5지역×48개월 달력 골격 불완전: {counts}")
+    expected_rows = len(SITES) * len(PERIOD_NAMES) * 12
+    if len(monthly) != expected_rows or not (counts == 12).all():
+        raise AssertionError(f"{len(SITES)}지역×48개월 달력 골격 불완전: {counts}")
     availability = availability_table(monthly)
     kpis = aggregate_kpis(monthly)
     growth = growth_table(kpis)
     its, its_sensitivity, its_robustness = its_tables(monthly)
     categories = category_change(z)
     concentration, spatial_change, spatial_relative, alignment = exact_period_auxiliary(z, kpis)
-    legacy_wanju_spatial, legacy_wanju_market = legacy_wanju_outputs()
+    mobility, origins = mobility_detail_outputs(z, kpis)
     outputs = {
         "period_definitions.csv": period_table(),
         "metric_dictionary.csv": metric_dictionary(),
@@ -495,8 +568,8 @@ def main() -> None:
         "spatial_change_available_sites.csv": spatial_change,
         "spatial_relative_growth_available_sites.csv": spatial_relative,
         "market_alignment_conditional_available_sites.csv": alignment,
-        "spatial_legacy_wanju_from_previous_p_extract.csv": legacy_wanju_spatial,
-        "market_alignment_legacy_wanju_from_previous_p_extract.csv": legacy_wanju_market,
+        "spatial_mobility_only.csv": mobility,
+        "mobility_origin_by_period.csv": origins,
         "not_computable_status.csv": status_table(),
         "data_quality.csv": quality_table(monthly, availability),
     }

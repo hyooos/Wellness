@@ -1,4 +1,4 @@
-"""WELL-FLOW v4: bottleneck-first monitor with prescriptions for wellness tourism sites."""
+"""WELL-FLOW v5: concise bottleneck-first monitor for wellness tourism sites."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from PIL import Image, ImageOps
 
 
 st.set_page_config(
-    page_title="WELL-FLOW Monitor · v4",
+    page_title="WELL-FLOW Monitor · v5",
     page_icon="🌿",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -44,14 +44,13 @@ SITES = pd.DataFrame(
 )
 ALIASES = {"쉴랜드": "쉴(SHIL)랜드"}
 
-# 여섯 칸: (칸 이름, 지표 컬럼, 지표 설명, 원천)
+# 다섯 칸: (칸 이름, 지표 컬럼, 지표 설명, 원천)
 STAGES = [
     ("관심", "숙박검색건수", "숙박 목적지 검색", "티맵"),
     ("방문", "외지인방문자수", "외지인 방문자", "KT"),
     ("숙박", "숙박자비율_pct", "숙박자 비율", "KT"),
     ("체류", "평균체류시간_분", "평균 체류시간", "KT"),
-    ("소비", "내국인관광소비_천원", "내국인 관광소비", "신한카드"),
-    ("파급", "SPREAD", "시설 읍면 소비 비중", "신한카드 읍면동"),
+    ("소비", "방문자대비관광소비_천원_proxy", "방문자 대비 소비", "신한카드·KT"),
 ]
 METRIC_LABEL = {
     "숙박검색건수": "숙박 검색",
@@ -79,7 +78,7 @@ STATUS = {
 }
 STRENGTH_CLASS = {"강함": "s-strong", "중간": "s-mid", "약함": "s-weak", "신호 없음": "s-none", "자료 없음": "s-none"}
 
-# 분석 보고서(6~7장)의 지역별 진단과 처방
+# 분석 보고서(6~7장)의 지역별 진단과 대응 방향
 STORY = {
     "전북완주": {
         "type": "숙박전환 병목형",
@@ -94,7 +93,7 @@ STORY = {
             ("저녁·야간 웰니스 프로그램", "당일 방문객이 하룻밤 머물 이유 만들기"),
             ("숙박 공급 확인", "데이터랩 숙박업 개폐업·객실 수로 '숙소 부족'인지 '머물 이유 부족'인지 구분"),
         ],
-        "avoid": [("방문객 유치 홍보 확대", "방문은 이미 4년 연속 늘고 있어 막힌 칸이 아닙니다")],
+        "avoid": [("방문객 유치 홍보 확대", "방문은 이미 4년 연속 늘고 있어 핵심 병목이 아닙니다")],
         "check_metric": "숙박자비율_pct",
         "actions": [
             ("지금", "다음 해 사업 계획에 1박 연계 상품·야간 프로그램 예산 배정"),
@@ -105,8 +104,8 @@ STORY = {
     "전북순창": {
         "type": "입구 단절형",
         "headline": "찾아보긴 하는데, 오지 않는다",
-        "bottleneck": ["방문"],
-        "bottleneck_label": "관심 → 방문 (접근성)",
+        "bottleneck": ["방문", "소비"],
+        "bottleneck_label": "관심 → 방문·소비",
         "strength": "강함",
         "evidence": "검색은 5.0% 늘었지만 방문은 3.9% 줄었고, 소비는 지정 시점에 18.4% 한 계단 내려앉았습니다(q=0.004, 8/8). 줄어든 소비의 대부분이 교통(육상운송 −49.2%)입니다.",
         "good": "외식 소비는 버텼고(일반외식업 +3.0%), 쉴랜드가 있는 인계면의 소비 비중은 올랐습니다.",
@@ -126,8 +125,8 @@ STORY = {
     "전남완도": {
         "type": "소비전환·시설거점형",
         "headline": "오래 머물지만 지갑은 닫혀 있고, 쓰는 돈은 시설 주변에 머문다",
-        "bottleneck": ["소비", "파급"],
-        "bottleneck_label": "체류 → 소비, 시설 → 군 전체",
+        "bottleneck": ["소비"],
+        "bottleneck_label": "체류 → 소비",
         "strength": "중간",
         "evidence": "방문자 대비 소비가 2년 연속 줄었습니다(−11.1% → −2.5%). 체험·문화 소비(관광유원시설 −48.3%)가 빠졌고, 소비는 센터가 있는 신지면으로만 모였습니다(5.0% → 6.9%).",
         "good": "체류는 가장 깁니다. 방문자 100명 중 3명이 3박 이상 머물러 다른 두 곳의 약 3배입니다.",
@@ -201,6 +200,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] { border-color:var(--line); bord
 .card-label { font-size:.82rem; font-weight:750; color:var(--ink2); }
 .site-name { font-size:1.6rem; font-weight:800; margin:.25rem 0 .1rem; letter-spacing:-.03em; }
 .site-loc { color:var(--muted); font-size:.8rem; }
+.site-address { color:var(--ink2); font-size:.76rem; margin-top:.3rem; line-height:1.4; }
 .pill { display:inline-block; border-radius:999px; padding:.22rem .7rem; font-size:.74rem; font-weight:750; }
 .pill-type { background:var(--leaf-soft); color:#1C6B4E; }
 .pill-bneck { background:var(--down-bg); color:#A63A26; }
@@ -210,7 +210,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] { border-color:var(--line); bord
 .chip small { display:block; color:var(--muted); font-size:.7rem; }
 .chip b { display:block; font-size:.92rem; margin-top:.15rem; color:var(--ink); }
 
-/* 여섯 칸 파이프라인 */
+/* 다섯 단계 파이프라인 */
 .flow-banner { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; padding:.2rem .1rem .9rem; }
 .flow-banner .msg { font-size:1.02rem; font-weight:700; color:var(--ink); }
 .flow-banner .msg em { font-style:normal; color:var(--down); }
@@ -259,7 +259,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] { border-color:var(--line); bord
 .tipbox .t-head { font-weight:800; font-size:.78rem; color:#fff; margin-bottom:.2rem; }
 .tipbox .t-note { color:#A9BDB2; font-size:.66rem; margin-top:.3rem; }
 
-/* 처방 */
+/* 대응 방향 */
 .rx-bneck { background:var(--down-bg); border-radius:14px; padding:.8rem .9rem; }
 .rx-bneck small { color:#A63A26; font-weight:800; font-size:.7rem; letter-spacing:.08em; }
 .rx-bneck .what { font-size:1.2rem; font-weight:800; color:var(--ink); margin:.2rem 0 .3rem; }
@@ -556,7 +556,37 @@ def period_table_html(region: str) -> str:
         rows.append(f"<tr{style}><td><b>{label}</b></td>{levels}{changes}</tr>")
     return (
         f'<table class="rel"><thead><tr><th>지표</th>{head}</tr></thead><tbody>{"".join(rows)}</tbody></table>'
-        '<div style="font-size:.72rem;color:var(--muted);margin-top:.35rem">붉은 배경 = 막힌 칸 지표</div>'
+        '<div style="font-size:.72rem;color:var(--muted);margin-top:.35rem">붉은 배경 = 핵심 병목 지표</div>'
+    )
+
+
+def bottleneck_detail_html(region: str, interval: str) -> str:
+    rows = []
+    for stage, metric, desc, _ in STAGES:
+        if stage not in STORY[region]["bottleneck"]:
+            continue
+        change_value, code = stage_change(region, metric, interval)
+        strength = its_strength(region, metric, "즉시수준변화")["label"]
+        rows.append(
+            f'<tr><td><b>{escape(stage)}</b><br><small>{escape(desc)}</small></td>'
+            f'<td>{fmt_level(kpi_value(region, "P2", metric), metric)}</td>'
+            f'<td>{fmt_level(kpi_value(region, "P3", metric), metric)}</td>'
+            f'<td>{fmt_level(kpi_value(region, "P4", metric), metric)}</td>'
+            f'<td class="c-{STATUS[code][2]}"><b>{fmt_change(change_value, metric)}</b></td>'
+            f'<td><span class="sbadge {STRENGTH_CLASS[strength]}">{escape(strength)}</span></td></tr>'
+        )
+    spread = spread_info(region, interval)
+    spread_note = ""
+    if spread:
+        spread_note = (
+            f'<div class="note"><b>보조 정보 · 시설지 소비 집중도</b> · {escape(str(spread["시설소재_읍면동"]))}의 군 소비 비중이 '
+            f'{spread["시설동_점유율_before_pct"]:.1f}%에서 {spread["시설동_점유율_after_pct"]:.1f}%로 변했습니다. '
+            '성과 단계가 아닌 소비 위치를 설명하는 참고 정보입니다.</div>'
+        )
+    return (
+        '<table class="rel"><thead><tr><th>핵심 병목</th><th>지정 직전</th><th>1년차</th><th>2년차</th>'
+        f'<th>{escape(interval.split(" (")[0])}</th><th>지정 시점 확인</th></tr></thead><tbody>{"".join(rows)}</tbody></table>'
+        + spread_note
     )
 
 
@@ -568,23 +598,6 @@ def sec_head(number: int, title: str, sub: str) -> None:
 
 
 def stage_tooltip(region: str, stage: str, metric: str, desc: str, source: str) -> str:
-    if metric == "SPREAD":
-        parts = [f'<div class="t-head">{stage} · {desc}</div>']
-        rows = []
-        for interval in INTERVALS:
-            info = spread_info(region, interval)
-            if info:
-                rows.append(
-                    f'<tr><td>{interval.split(" (")[0]}</td><td>{info["시설동_점유율_before_pct"]:.1f}% → {info["시설동_점유율_after_pct"]:.1f}%</td></tr>'
-                    f'<tr><td>&nbsp;시설 읍면 / 군 전체 성장</td><td>{info["시설동_성장률_pct"]:+.1f}% / {info["시군구_성장률_pct"]:+.1f}%</td></tr>'
-                )
-        if rows:
-            parts.append("<table>" + "".join(rows) + "</table>")
-            parts.append('<div class="t-note">읍면 소비 비중은 소수점 한 자리로 공개되어 방향만 참고합니다.</div>')
-        else:
-            parts.append('<div class="t-note">지정 전후 구간과 맞는 읍면동 자료가 없어 판정하지 않았습니다.</div>')
-        return '<div class="tipbox">' + "".join(parts) + "</div>"
-
     values = "".join(
         f"<tr><td>{PERIOD_SHORT[p]}</td><td>{fmt_level(kpi_value(region, p, metric), metric)}</td></tr>" for p in PERIODS
     )
@@ -597,9 +610,9 @@ def stage_tooltip(region: str, stage: str, metric: str, desc: str, source: str) 
             f'<tr><td>지정 후 속도 변화</td><td>{its_effect_text(metric, slope, "기울기")} · {slope["label"]}</td></tr>'
         )
     extra = ""
-    if metric == "내국인관광소비_천원":
+    if metric == "방문자대비관광소비_천원_proxy":
         extra = "".join(
-            f"<tr><td>방문자 대비 · {PERIOD_SHORT[p]}</td><td>{fmt_level(kpi_value(region, p, '방문자대비관광소비_천원_proxy'), '방문자대비관광소비_천원_proxy')}</td></tr>"
+            f"<tr><td>총소비 · {PERIOD_SHORT[p]}</td><td>{fmt_level(kpi_value(region, p, '내국인관광소비_천원'), '내국인관광소비_천원')}</td></tr>"
             for p in ("P2", "P3", "P4")
         )
     return (
@@ -616,28 +629,16 @@ def pipeline_html(region: str, interval: str) -> str:
     cards = []
     for idx, (stage, metric, desc, source) in enumerate(STAGES, 1):
         is_bneck = stage in story["bottleneck"]
-        if metric == "SPREAD":
-            info = spread_info(region, interval)
-            if info:
-                value_text = f'{info["시설동_점유율_after_pct"]:.1f}%'
-                change_val = info["시설동_점유율변화_pctp"]
-                code = "INFO"
-                change_html = f'<span class="c-info">{change_val:+.1f}%p</span><span class="j j-info">{"시설지 집중" if change_val > 0 else "분산"}</span>'
-            else:
-                value_text, code = "자료 없음", "NA"
-                change_html = '<span class="c-na">–</span><span class="j j-na">판정 안 함</span>'
-            sig = "읍면동 비중"
-        else:
-            value = kpi_value(region, after, metric)
-            change_val, code = stage_change(region, metric, interval)
-            label, arrow, cls = STATUS[code]
-            value_text = fmt_level(value, metric)
-            change_html = f'<span class="c-{cls}">{arrow} {fmt_change(change_val, metric)}</span><span class="j j-{cls}">{label}</span>'
-            level = its_strength(region, metric, "즉시수준변화")
-            sig = f'ITS 계단 {level["label"]}' if level["label"] != "자료 없음" else "ITS 대상 아님"
+        value = kpi_value(region, after, metric)
+        change_val, code = stage_change(region, metric, interval)
+        label, arrow, cls = STATUS[code]
+        value_text = fmt_level(value, metric)
+        change_html = f'<span class="c-{cls}">{arrow} {fmt_change(change_val, metric)}</span><span class="j j-{cls}">{label}</span>'
+        level = its_strength(region, metric, "즉시수준변화")
+        sig = f'ITS 계단 {level["label"]}' if level["label"] != "자료 없음" else "ITS 대상 아님"
         cls = STATUS[code][2]
         tag = ""
-        band = '<div class="bneck-band">막힌 칸</div>' if is_bneck else ""
+        band = '<div class="bneck-band">핵심 병목</div>' if is_bneck else ""
         cards.append(
             f'<div class="stage tip {cls}{" bneck" if is_bneck else ""}">{band}'
             f'<div class="stage-top"><span class="stage-no">{idx}</span><span class="stage-name">{stage}</span>{tag}</div>'
@@ -804,7 +805,7 @@ def selection_map(selected: str) -> go.Figure:
     pts["유형"] = pts["지역키"].map(lambda k: STORY[k]["type"])
     pts["막힌칸"] = pts["지역키"].map(lambda k: STORY[k]["bottleneck_label"])
     custom = pts[["지역키", "시설", "유형", "막힌칸", "지역"]]
-    hover = "<b>%{customdata[1]}</b> · %{customdata[4]}<br>진단: %{customdata[2]}<br>막힌 칸: %{customdata[3]}<br><i>클릭해서 선택</i><extra></extra>"
+    hover = "<b>%{customdata[1]}</b> · %{customdata[4]}<br>진단: %{customdata[2]}<br>핵심 병목: %{customdata[3]}<br><i>클릭해서 선택</i><extra></extra>"
     halo = go.Scattergeo(
         lon=pts["경도"], lat=pts["위도"], mode="markers", customdata=custom, hovertemplate=hover,
         marker={"size": np.where(pts["sel"], 50, 38), "color": np.where(pts["sel"], "rgba(47,143,107,.30)", "rgba(255,255,255,.85)"),
@@ -830,7 +831,7 @@ def selection_map(selected: str) -> go.Figure:
     )
     fig = go.Figure([muni, prov, halo, leaf, label])
     fig.update_layout(
-        height=430, margin=dict(l=0, r=0, t=0, b=0), showlegend=False, clickmode="event+select", dragmode=False,
+        height=390, margin=dict(l=0, r=0, t=0, b=0), showlegend=False, clickmode="event+select", dragmode=False,
         paper_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor="#14261E", font_color="#EAF2ED", font_family="Pretendard", bordercolor="#14261E"),
         geo=dict(bgcolor="rgba(0,0,0,0)", showland=False, showcountries=False, showcoastlines=False, showframe=False,
@@ -860,9 +861,9 @@ def selected_from_map(event: object) -> str | None:
 # ---------------------------------------------------------------------------
 # 화면
 # ---------------------------------------------------------------------------
-if st.session_state.get("v4_site") not in set(SITES["지역키"]):
-    st.session_state.v4_site = SITES.iloc[0]["지역키"]
-selected = st.session_state.v4_site
+if st.session_state.get("v5_site") not in set(SITES["지역키"]):
+    st.session_state.v5_site = SITES.iloc[0]["지역키"]
+selected = st.session_state.v5_site
 site = SITES.loc[SITES["지역키"].eq(selected)].iloc[0]
 story = STORY[selected]
 periods = DATA["periods"].loc[DATA["periods"]["지역키"].eq(selected)].set_index("기간")
@@ -880,15 +881,15 @@ map_col, card_col = st.columns([1, 1.15], gap="medium")
 with map_col:
     with st.container(border=True, height="stretch"):
         event = st.plotly_chart(
-            selection_map(selected), width="stretch", key="v4_map", on_select="rerun", selection_mode="points",
+            selection_map(selected), width="stretch", key="v5_map", on_select="rerun", selection_mode="points",
             config={"displayModeBar": False, "scrollZoom": False, "doubleClick": False},
         )
         clicked = selected_from_map(event)
         if clicked and clicked != selected:
-            st.session_state.v4_site = clicked
+            st.session_state.v5_site = clicked
             st.rerun()
 with card_col:
-    with st.container(border=True, height="stretch"):
+    with st.container(border=True, height="stretch", vertical_alignment="center"):
         photo_col, info_col = st.columns([.8, 1.2], gap="medium")
         with photo_col:
             photo = site_image(selected)
@@ -897,42 +898,47 @@ with card_col:
         with info_col:
             catalog = DATA["site_catalog"].loc[DATA["site_catalog"]["시설명"].eq(ALIASES.get(site["시설"], site["시설"]))]
             theme = str(catalog.iloc[0]["테마"]) if not catalog.empty and "테마" in catalog else "웰니스"
+            address = catalog.iloc[0].get("tour_api_addr", "") if not catalog.empty else ""
+            address = str(address) if pd.notna(address) and str(address).strip() else "주소 정보 없음"
             st.markdown(
                 f'<div class="card-label">선택 관광지</div><div class="site-name">{escape(site["시설"])}</div>'
                 f'<div class="site-loc">{escape(site["지역"])} {escape(site["시설동"])} · {int(site["선정연도"])}년 지정 · {escape(theme)} 테마</div>'
+                f'<div class="site-address">{escape(address)}</div>'
                 f'<div style="margin-top:.6rem;display:flex;gap:6px;flex-wrap:wrap"><span class="pill pill-type">{escape(story["type"])}</span>'
-                f'<span class="pill pill-bneck">막힌 칸 · {escape(story["bottleneck_label"])}</span></div>',
+                f'<span class="pill pill-bneck">핵심 병목 · {escape(story["bottleneck_label"])}</span></div>',
                 unsafe_allow_html=True,
             )
         check_metric = story["check_metric"]
         st.markdown(
             f'<div class="headline">{escape(story["headline"])}</div>'
             f'<div class="chips">'
-            f'<div class="chip"><small>막힌 칸</small><b>{escape(story["bottleneck_label"])}</b></div>'
+            f'<div class="chip"><small>핵심 병목</small><b>{escape(story["bottleneck_label"])}</b></div>'
             f'<div class="chip"><small>확인 강도</small><b><span class="sbadge {STRENGTH_CLASS[story["strength"]]}">{escape(story["strength"])}</span></b></div>'
             f'<div class="chip"><small>다음 점검 지표</small><b>{escape(METRIC_LABEL[check_metric])}</b></div></div>',
             unsafe_allow_html=True,
         )
 
-# 1. 여섯 칸 ---------------------------------------------------------------
-sec_head(1, "병목 진단", "지정 전후 여섯 단계의 변화 · 카드에 마우스를 올리면 네 구간 값과 통계 근거")
+# 1. 다섯 칸 ---------------------------------------------------------------
+sec_head(1, "병목 진단", "지정 전후 다섯 단계의 변화 · 핵심 병목과 현재 구간 하락을 구분해 표시")
 with st.container(border=True):
-    interval = st.segmented_control("비교 구간", list(INTERVALS), default=list(INTERVALS)[0], label_visibility="collapsed", key="v4_interval")
+    interval = st.segmented_control("비교 구간", list(INTERVALS), default=list(INTERVALS)[0], label_visibility="collapsed", key="v5_interval")
     interval = interval or list(INTERVALS)[0]
     downs = [s for s, m, *_ in STAGES[:5] if stage_change(selected, m, interval)[1] == "DOWN"]
     down_text = "·".join(downs) if downs else "없음"
     st.markdown(
-        f'<div class="flow-banner"><div class="msg">막힌 칸은 <em>{escape(story["bottleneck_label"])}</em>입니다 · 이 구간 내림 칸: {escape(down_text)}</div>'
+        f'<div class="flow-banner"><div class="msg">핵심 병목은 <em>{escape(story["bottleneck_label"])}</em>입니다 · 현재 구간 하락: {escape(down_text)}</div>'
         '<div class="legend"><span><i style="background:var(--up)"></i>오름 (+3% 초과)</span><span><i style="background:var(--flat)"></i>유지</span>'
         '<span><i style="background:var(--down)"></i>내림 (−3% 미만)</span><span><i style="background:var(--na)"></i>자료 없음</span>'
-        '<span><i style="background:#fff;border:2px solid var(--down)"></i>막힌 칸</span></div></div>',
+        '<span><i style="background:#fff;border:2px solid var(--down)"></i>핵심 병목</span></div></div>',
         unsafe_allow_html=True,
     )
     st.markdown(pipeline_html(selected, interval), unsafe_allow_html=True)
-    st.markdown(f'<div class="note"><b>왜 여기가 막혔나</b> · {escape(story["evidence"])}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="note"><b>핵심 병목 근거</b> · {escape(story["evidence"])}</div>', unsafe_allow_html=True)
+    with st.expander("핵심 병목 근거 자세히 보기"):
+        st.markdown(bottleneck_detail_html(selected, interval), unsafe_allow_html=True)
 
-# 2. 처방 ----------------------------------------------------------------
-sec_head(2, "처방", "막힌 칸에 맞춘 권장·지양 사업과 다음 점검 지표")
+# 2. 대응 방향 ------------------------------------------------------------
+sec_head(2, "대응 방향", "핵심 병목에 맞춘 우선 검토 사항과 다음 점검 지표")
 rx_col, plan_col = st.columns([1.5, 1], gap="medium")
 with rx_col:
     with st.container(border=True, height="stretch"):
@@ -945,10 +951,10 @@ with rx_col:
             for t, d in story["avoid"]
         )
         st.markdown(
-            f'<div class="rx-bneck"><small>막힌 칸 · 확인 강도 {escape(story["strength"])}</small><div class="what">{escape(story["bottleneck_label"])}</div>'
+            f'<div class="rx-bneck"><small>핵심 병목 · 확인 강도 {escape(story["strength"])}</small><div class="what">{escape(story["bottleneck_label"])}</div>'
             f'<p>{escape(story["headline"])}</p></div>'
-            f'<div class="rx-cols"><div class="rx-box rx-do"><h4>권장 사업</h4>{do_items}</div>'
-            f'<div class="rx-box rx-dont"><h4>지양 사업</h4>{dont_items}</div></div>'
+            f'<div class="rx-cols"><div class="rx-box rx-do"><h4>우선 검토</h4>{do_items}</div>'
+            f'<div class="rx-box rx-dont"><h4>우선순위 낮음</h4>{dont_items}</div></div>'
             f'<div class="rx-good"><b>이미 괜찮은 칸</b> · {escape(story["good"])}</div>',
             unsafe_allow_html=True,
         )
@@ -960,10 +966,10 @@ with plan_col:
             f'<div class="step{" now" if i == 0 else ""}"><span class="dot">{i + 1}</span><div><small>{escape(when)}</small><div class="txt">{escape(what)}</div></div></div>'
             for i, (when, what) in enumerate(story["actions"])
         )
-        st.markdown(f'<div class="card-label" style="margin-top:1rem">정책 단계 추천</div><div class="steps" style="margin-top:.6rem">{steps}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="card-label" style="margin-top:1rem">점검 순서</div><div class="steps" style="margin-top:.6rem">{steps}</div>', unsafe_allow_html=True)
 
 # 3. 조기 경보 + 지역 비교 -------------------------------------------------
-sec_head(3, "조기 경보 · 지역 비교", "1년차에 강하게 확인된 하락은 2년차에도 남는 경향")
+sec_head(3, "조기 경보 · 지역 비교", "1년차 하락 지표가 2년차에 회복됐는지 확인")
 ew_col, mx_col = st.columns([1, 1.35], gap="medium")
 with ew_col:
     with st.container(border=True, height="stretch"):
@@ -998,20 +1004,12 @@ with mx_col:
             cells = []
             for stage, metric, desc, _ in STAGES:
                 is_b = stage in STORY[reg.지역키]["bottleneck"]
-                if metric == "SPREAD":
-                    info = spread_info(reg.지역키, interval)
-                    if info:
-                        cls, arrow, val = "info", "◦", f'{info["시설동_점유율변화_pctp"]:+.1f}%p'
-                        tip = f'{desc}: {info["시설동_점유율_before_pct"]:.1f}% → {info["시설동_점유율_after_pct"]:.1f}%'
-                    else:
-                        cls, arrow, val, tip = "na", "·", "자료 없음", "읍면동 구간 자료 없음"
-                else:
-                    change_val, code = stage_change(reg.지역키, metric, interval)
-                    label, arrow, cls = STATUS[code]
-                    val = fmt_change(change_val, metric)
-                    a, b = INTERVALS[interval][3], INTERVALS[interval][4]
-                    tip = f"{desc}: {fmt_level(kpi_value(reg.지역키, a, metric), metric)} → {fmt_level(kpi_value(reg.지역키, b, metric), metric)} ({label})"
-                body_tip = f'<div class="tipbox"><div class="t-head">{escape(reg.지역)} · {stage}{" · 막힌 칸" if is_b else ""}</div>{escape(tip)}</div>'
+                change_val, code = stage_change(reg.지역키, metric, interval)
+                label, arrow, cls = STATUS[code]
+                val = fmt_change(change_val, metric)
+                a, b = INTERVALS[interval][3], INTERVALS[interval][4]
+                tip = f"{desc}: {fmt_level(kpi_value(reg.지역키, a, metric), metric)} → {fmt_level(kpi_value(reg.지역키, b, metric), metric)} ({label})"
+                body_tip = f'<div class="tipbox"><div class="t-head">{escape(reg.지역)} · {stage}{" · 핵심 병목" if is_b else ""}</div>{escape(tip)}</div>'
                 cells.append(f'<td class="cell tip {cls}{" bneck" if is_b else ""}">{arrow}<small>{val}</small>{body_tip}</td>')
             sel = ' class="sel"' if reg.지역키 == selected else ""
             body.append(
@@ -1032,12 +1030,12 @@ with st.container(border=True):
         "흐름 추이", "지정 시점 확인 (ITS)", "웰니스 지표", "방문 출발지 · 주변 환경", "네 구간 값 표", "데이터 신뢰도 · 추가 필요 자료",
     ])
     with tab1:
-        st.caption("다섯 칸을 첫 구간 = 100으로 맞춘 추이입니다. 굵은 빨간 선이 막힌 칸입니다.")
+        st.caption("다섯 단계를 첫 구간 = 100으로 맞춘 추이입니다. 굵은 빨간 선이 핵심 병목입니다.")
         st.plotly_chart(index_chart(selected), width="stretch", config={"displayModeBar": False})
     with tab2:
         options = ["숙박검색건수", "외지인방문자수", "숙박자비율_pct", "평균체류시간_분", "내국인관광소비_천원", "방문자대비관광소비_천원_proxy"]
         default = check_metric if check_metric in options else "내국인관광소비_천원"
-        metric = st.selectbox("지표", options, index=options.index(default), format_func=lambda x: METRIC_LABEL[x], key="v4_its_metric")
+        metric = st.selectbox("지표", options, index=options.index(default), format_func=lambda x: METRIC_LABEL[x], key="v5_its_metric")
         st.plotly_chart(its_chart(selected, metric), width="stretch", config={"displayModeBar": False})
         if metric in set(DATA["its"].loc[DATA["its"]["지역키"].eq(selected), "지표"]):
             lv, sl = its_strength(selected, metric, "즉시수준변화"), its_strength(selected, metric, "지정후기울기변화")
@@ -1063,7 +1061,7 @@ with st.container(border=True):
         st.markdown('<div class="wl-grid">' + "".join(tiles) + "</div>", unsafe_allow_html=True)
         st.markdown(
             '<div class="note">지정 1년차 기준입니다. WStay = 숙박자 비율 × 숙박객 중 3박 이상 비율(전체 방문자 중 3박 이상 추정 비율). '
-            'DSI = 1 − 월별 방문 변동계수(1에 가까울수록 사계절 수요가 고름). 웰니스 지표는 막힌 칸과 별개의 질문입니다.</div>',
+            'DSI = 1 − 월별 방문 변동계수(1에 가까울수록 사계절 수요가 고름). 웰니스 지표는 핵심 병목과 별개의 질문입니다.</div>',
             unsafe_allow_html=True,
         )
     with tab4:
@@ -1090,7 +1088,7 @@ with st.container(border=True):
             st.markdown('<div class="card-label">시설 반경 5km 주변 환경</div>', unsafe_allow_html=True)
             st.markdown('<div class="poi-grid">' + "".join(
                 f'<div class="poi">{k}<b>{int(poi_map.get(k, 0))}</b></div>' for k in ["숙박", "음식점", "관광지", "문화시설"]
-            ) + f'</div><div class="note">{escape(near)} · 숙박 공급은 막힌 칸이 "숙소 부족"인지 "머물 이유 부족"인지 가르는 참고 정보입니다.</div>', unsafe_allow_html=True)
+            ) + f'</div><div class="note">{escape(near)} · 숙박 공급은 핵심 병목이 "숙소 부족"인지 "머물 이유 부족"인지 가르는 참고 정보입니다.</div>', unsafe_allow_html=True)
     with tab5:
         st.markdown(period_table_html(selected), unsafe_allow_html=True)
         st.markdown(
@@ -1109,8 +1107,8 @@ with st.container(border=True):
                 ("숙박 전환 · 체류", "시군구 월별", "확보", "ok", "KT 숙박자 비율·체류시간, 방문객 수 가중평균"),
                 ("소비", "시군구 월별", "확보", "ok", "신한카드 내국인 관광소비, 업종별 포함"),
                 ("방문자 대비 소비", "시군구", "대리지표", "partial", "카드 이용자와 방문자가 달라 1인당 소비가 아님"),
-                ("지역 파급", "읍면동", "확보" if has_spread else "자료 없음", "ok" if has_spread else "missing",
-                 "읍면 소비 비중이 소수점 한 자리로 공개되어 방향만 참고" if has_spread else "지정 전후 구간과 맞는 읍면동 자료 없음"),
+                ("시설지 소비 집중도", "읍면동", "참고" if has_spread else "자료 없음", "partial" if has_spread else "missing",
+                 "시설 소재 읍면의 소비 비중이며 지역 파급 성과로 판정하지 않음" if has_spread else "지정 전후 구간과 맞는 읍면동 자료 없음"),
                 ("방문 출발지", "시군구", "확보" if has_origin else "자료 없음", "ok" if has_origin else "missing", "검색 출발지는 광역별 조건부 분포라 광역마다 따로 비교"),
                 ("지정 시점 확인(ITS)", "시군구 월별 48개월", "구조변화 근거", "partial", "비교 지역이 없어 인과효과가 아닌 지정 전후 구조변화"),
                 ("시설 자체 성과", "시설", "추후 과제", "missing", "데이터랩은 시군구 단위라 시설 이용 실적은 따로 확보 필요"),
@@ -1127,7 +1125,7 @@ with st.container(border=True):
                 unsafe_allow_html=True,
             )
         with need_col:
-            st.markdown('<div class="card-label">막힌 칸의 원인을 확정하려면 필요한 자료</div>', unsafe_allow_html=True)
+            st.markdown('<div class="card-label">핵심 병목의 원인을 확정하려면 필요한 자료</div>', unsafe_allow_html=True)
             st.markdown(
                 '<div class="steps" style="margin-top:.6rem">' + "".join(
                     f'<div class="step"><span class="dot">{i}</span><div><small>{escape(title)}</small><div class="txt">{escape(reason)}</div></div></div>'
@@ -1136,7 +1134,7 @@ with st.container(border=True):
                 unsafe_allow_html=True,
             )
             st.markdown(
-                '<div class="note">추가 자료를 확보하기 전에는 막힌 칸의 <b>위치</b>까지만 말하고 <b>원인</b>은 확정하지 않습니다. '
+                '<div class="note">추가 자료를 확보하기 전에는 핵심 병목의 <b>위치</b>까지만 말하고 <b>원인</b>은 확정하지 않습니다. '
                 '지자체 사업 예산(사업명·겨냥한 칸·금액·집행 시작월)을 더하면 칸별 투입 대비 효과까지 볼 수 있습니다.</div>',
                 unsafe_allow_html=True,
             )
