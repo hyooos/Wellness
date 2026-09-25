@@ -55,12 +55,19 @@ function SectionTitle({ number, title, subtitle }) {
 
 function JeollaMap({ geo, sites, selected, onSelect }) {
   const width = 520, height = 380;
-  const { paths, points } = useMemo(() => {
-    if (!geo) return { paths: [], points: [] };
+  const labelPosition = {
+    전북완주: { x: -25, y: 5, anchor: "end" },
+    전북무주: { x: 0, y: 35, anchor: "middle" },
+    전북순창: { x: 0, y: 35, anchor: "middle" },
+    전남완도: { x: 0, y: 35, anchor: "middle" },
+  };
+  const { paths, provincePaths, points } = useMemo(() => {
+    if (!geo) return { paths: [], provincePaths: [], points: [] };
     const projection = geoMercator().fitExtent([[22, 20], [width - 22, height - 20]], geo);
     const path = geoPath(projection);
     return {
       paths: geo.features.map((feature, index) => ({ index, d: path(feature), name: feature.properties.NAME_2 })),
+      provincePaths: (geo.provinceFeatures || []).map((feature, index) => ({ index, d: path(feature) })),
       points: Object.entries(sites).map(([key, site]) => ({ key, site, xy: projection([site.longitude, site.latitude]) })),
     };
   }, [geo, sites]);
@@ -71,9 +78,16 @@ function JeollaMap({ geo, sites, selected, onSelect }) {
       const key = siteByCounty[item.name];
       return <path key={item.index} d={item.d} className={`county ${key ? "target" : ""} ${key === selected ? "selected" : ""}`} onClick={() => key && onSelect(key)} />;
     })}
-    {points.map(({ key, site, xy }) => xy && <g key={key} className={`marker ${key === selected ? "selected" : ""}`} transform={`translate(${xy[0]} ${xy[1]})`} onClick={() => onSelect(key)}>
-      <circle r={key === selected ? 13 : 10} /><path d="M0,-7 C7,-4 8,3 0,8 C-8,3 -7,-4 0,-7Z" /><text y="-16">{site.region}</text>
-    </g>)}
+    {provincePaths.map(item => <path key={`province-${item.index}`} d={item.d} className="province-outline" />)}
+    {points.map(({ key, site, xy }) => {
+      if (!xy) return null;
+      const label = labelPosition[key];
+      return <g key={key} className={`marker ${key === selected ? "selected" : ""}`} transform={`translate(${xy[0]} ${xy[1]})`} onClick={() => onSelect(key)}>
+        <circle className="marker-halo" r={key === selected ? 24 : 19} />
+        <text className="marker-leaf" y="7">🌿</text>
+        <text className="marker-label" x={label.x} y={label.y} textAnchor={label.anchor}>{site.region}</text>
+      </g>;
+    })}
   </svg>;
 }
 
@@ -147,10 +161,14 @@ export default function Dashboard() {
 
   return <main>
     <header className="topbar"><div className="brand"><b>WELL-FLOW <span>Monitor</span></b><p>웰니스 관광지 성과 진단</p></div><div className="top-meta">{site.region} 분석기간 · {ym(period.P1.시작월)}–{ym(period.P4.종료월)} · 지정월 기준</div></header>
-    <div className="map-label"><b>전라도 웰니스 관광지 위치</b><span>지도에서 지역을 선택하세요</span></div>
+    <div className="map-label"><b>전라도 웰니스 관광지 위치</b><span>진한 초록 · 현재 선택</span></div>
     <section className="hero-grid">
       <div className="panel map-panel"><JeollaMap geo={geo} sites={data.sites} selected={selected} onSelect={setSelected} /></div>
-      <div className="panel site-panel"><img src={`/sites/${site.image}`} alt={site.site} /><div className="site-copy"><span className="eyebrow">SELECTED SITE</span><h1>{site.site}</h1><p className="location">{site.region} · {site.dong} · {site.year}년 선정</p><p className="address">{site.address}</p><div className="diagnosis"><small>{site.type}</small><strong>{site.headline}</strong></div></div></div>
+      <div className="panel site-panel">
+        <div className="site-main"><img src={`/sites/${site.image}`} alt={site.site} /><div className="site-copy"><span className="card-label">선택 관광지</span><h1>{site.site}</h1><p className="location">{site.region} {site.dong} · {site.year}년 지정 · {site.theme} 테마</p><p className="address">{site.address}</p><div className="site-pills"><span className="site-pill type">{site.type}</span><span className="site-pill bottleneck">핵심 병목 · {site.bottleneckLabel}</span></div></div></div>
+        <p className="site-headline">{site.headline}</p>
+        <div className="site-chips"><div><small>핵심 병목</small><b>{site.bottleneckLabel}</b></div><div><small>확인 강도</small><b><span className={`strength strength-${site.strength}`}>{site.strength}</span></b></div><div><small>다음 점검 지표</small><b>{LABEL[site.checkMetric]}</b></div></div>
+      </div>
     </section>
 
     <SectionTitle number="1" title="병목 진단" subtitle="지정 전후 다섯 단계의 변화와 핵심 병목을 한눈에 확인합니다" />

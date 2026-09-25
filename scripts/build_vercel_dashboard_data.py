@@ -18,7 +18,7 @@ PUBLIC = ROOT / "vercel-dashboard" / "public"
 
 SITES = {
     "전북완주": {
-        "region": "완주군", "site": "아원고택", "dong": "소양면", "year": 2024,
+        "region": "완주군", "site": "아원고택", "dong": "소양면", "year": 2024, "theme": "스테이",
         "longitude": 127.244624, "latitude": 35.903470, "geoName": "Wanju", "image": "wanju.jpg",
         "address": "전북특별자치도 완주군 소양면 송광수만로 516-7",
         "type": "숙박전환 병목형", "headline": "사람은 계속 오는데, 자고 가지 않는다",
@@ -32,7 +32,7 @@ SITES = {
         "needs": [["시설 직접 이용", "예약·방문·숙박 구분 실적"], ["숙박 공급", "숙박업 개폐업·객실 수"], ["숙박 원인", "방문객 숙박지·예약·이동 동선"]],
     },
     "전북순창": {
-        "region": "순창군", "site": "쉴랜드", "dong": "인계면", "year": 2024,
+        "region": "순창군", "site": "쉴랜드", "dong": "인계면", "year": 2024, "theme": "푸드",
         "longitude": 127.131587, "latitude": 35.431547, "geoName": "Sunchang", "image": "sunchang.jpg",
         "address": "전북특별자치도 순창군 인계면 인덕로 427-128",
         "type": "입구 단절형", "headline": "찾아보긴 하는데, 오지 않는다",
@@ -46,7 +46,7 @@ SITES = {
         "needs": [["시설 직접 이용", "검색 이후 예약·실방문 전환"], ["접근성", "거점 도시별 교통·셔틀 이용"], ["이탈 원인", "가격·후기·예약 단계 이탈"]],
     },
     "전남완도": {
-        "region": "완도군", "site": "완도 해양치유센터", "dong": "신지면", "year": 2024,
+        "region": "완도군", "site": "완도 해양치유센터", "dong": "신지면", "year": 2024, "theme": "자연/숲치유",
         "longitude": 126.818435, "latitude": 34.328049, "geoName": "Wando", "image": "wando.jpg",
         "address": "전라남도 완도군 신지면 내정2길 52-1",
         "type": "소비전환·시설거점형", "headline": "오래 머물지만 지갑은 닫혀 있고, 소비는 시설 주변에 머문다",
@@ -60,7 +60,7 @@ SITES = {
         "needs": [["시설 직접 이용", "예약·프로그램·재방문 실적"], ["이용 전환", "군 방문객 중 센터 실제 이용 비율"], ["소비 경로", "체류 중 결제와 타 읍면 이동"]],
     },
     "전북무주": {
-        "region": "무주군", "site": "태권도원 상징지구", "dong": "설천면", "year": 2022,
+        "region": "무주군", "site": "태권도원 상징지구", "dong": "설천면", "year": 2022, "theme": "힐링/명상",
         "longitude": 127.762090, "latitude": 36.012521, "geoName": "Muju", "image": "muju.jpg",
         "address": "전북특별자치도 무주군 설천면 무설로 1482",
         "type": "선행 성장형", "headline": "성과는 좋지만 상승은 지정 전에 이미 시작됐다",
@@ -144,6 +144,11 @@ def main() -> None:
     raw_geo["features"] = [
         {**feature, "geometry": mapping(shape(feature["geometry"]).simplify(0.003, preserve_topology=True))}
         for feature in raw_geo["features"]
+    ]
+    province_geo = json.loads((ROOT / "assets" / "skorea-provinces-geo.json").read_text(encoding="utf-8"))
+    raw_geo["provinceFeatures"] = [
+        {**feature, "geometry": mapping(shape(feature["geometry"]).simplify(0.003, preserve_topology=True))}
+        for feature in province_geo["features"]
     ]
     (PUBLIC / "data" / "jeolla.geojson").write_text(
         json.dumps(raw_geo, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
