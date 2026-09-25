@@ -20,3 +20,8 @@ data/**/*.zip
 # OS files
 .DS_Store
 Thumbs.db
+
+# Next.js / Vercel build outputs
+vercel-dashboard/node_modules/
+vercel-dashboard/.next/
+vercel-dashboard/.vercel/

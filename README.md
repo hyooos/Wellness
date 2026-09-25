@@ -24,6 +24,19 @@ streamlit run v2.dashboard_monitor_clean.py
 streamlit run v3.dashboard_monitor_map.py
 ```
 
+v5의 진단 흐름을 유지한 Vercel용 Next.js 버전은 `vercel-dashboard/`에 있습니다.
+
+```bash
+python scripts/build_vercel_dashboard_data.py
+cd vercel-dashboard
+npm install
+npm run dev
+```
+
+Vercel에서 현재 GitHub 저장소를 가져온 뒤 **Root Directory**를
+`vercel-dashboard`로 지정하면 별도 저장소 없이 배포할 수 있습니다. 분석 CSV가
+바뀌면 데이터 생성 스크립트를 다시 실행해 `public/data/`를 갱신합니다.
+
 대시보드는 `output/4개_웰니스관광지_성과분석/`의 CSV 산출물을 읽습니다.
 
 출력 폴더는 다음처럼 구분합니다.
