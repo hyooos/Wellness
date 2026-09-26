@@ -428,8 +428,8 @@ export default function Dashboard() {
       <div className="panel site-panel">
         <div className="site-main"><img src={`/sites/${site.image}`} alt={site.site} /><div className="site-copy"><span className="card-label">선택 관광지</span><h1>{site.site}</h1><p className="location">{site.region} {site.dong} · {site.year}년 지정 · {site.theme} 테마</p><p className="address">{site.address}</p><div className="site-pills"><span className="site-pill type">{site.type}</span>{site.caseNote && <span className="site-pill case-note">{site.caseNote}</span>}<span className="site-pill bottleneck">우선 확인 · {site.bottleneckLabel}</span></div></div></div>
         <p className="site-headline">{site.headline}</p>
-        {site.contextWarning && <p className="scope-warning"><b>해석 범위</b><span>{site.contextWarning}</span></p>}
         <div className="site-chips"><div><small>우선 확인 축</small><b>{site.bottleneckLabel}</b></div><div><small>확인 강도</small><b><span className={`strength strength-${strengthClass(site.strength)}`}>{site.strength}</span></b></div><div><small>다음 점검 지표</small><b>{LABEL[site.checkMetric]}</b></div></div>
+        {site.contextWarning && <p className="scope-warning"><b>해석 범위</b><span>{site.contextWarning}</span></p>}
       </div>
     </section>
 

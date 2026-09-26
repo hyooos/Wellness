@@ -93,8 +93,8 @@ main { width: min(1480px, calc(100% - 40px)); margin: 0 auto; padding: 22px 0 42
 .site-pill.case-note { color: #5f4d25; background: #f5edd8; }
 .site-pill.bottleneck { color: #a63a26; background: var(--down-bg); }
 .site-headline { margin: 14px 0 10px; color: var(--ink); font-size: 1rem; font-weight: 700; line-height: 1.45; }
-.scope-warning { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; padding: 8px 10px; border: 1px solid #e5d7bd; border-radius: 9px; background: #fffaf0; color: #695b42; font-size: .76rem; line-height: 1.4; }
-.scope-warning b { flex: 0 0 auto; color: #8a6129; }
+.scope-warning { display: flex; align-items: center; gap: 6px; margin: 7px 2px 0; color: var(--muted); font-size: .67rem; line-height: 1.35; }
+.scope-warning b { flex: 0 0 auto; color: #806b4d; font-size: .65rem; }
 .scope-warning span { min-width: 0; }
 .site-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .site-chips > div { padding: 10px 11px; border-radius: 12px; background: var(--soft); }
