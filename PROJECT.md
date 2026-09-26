@@ -83,7 +83,7 @@
 | `period_definitions.csv` | 지역별 P1–P4 기간 |
 | `monthly_input.csv` | 통합 월별 입력 |
 | `kpi_by_period.csv` | 기간별 핵심 KPI |
-| `growth_bottleneck.csv` | 비교 구간별 변화와 우선 확인 축 |
+| `growth_bottleneck.csv` | 비교 구간별 변화와 우선 점검 축 |
 | `its_designation_hac3.csv` | 지정 시점 ITS 결과 |
 | `its_hac_sensitivity.csv` | HAC 시차 민감도 |
 | `its_robustness.csv` | 기준 시점 민감도와 다중검정 결과 |
