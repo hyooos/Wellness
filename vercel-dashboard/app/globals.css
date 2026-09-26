@@ -93,6 +93,9 @@ main { width: min(1480px, calc(100% - 40px)); margin: 0 auto; padding: 22px 0 42
 .site-pill.case-note { color: #5f4d25; background: #f5edd8; }
 .site-pill.bottleneck { color: #a63a26; background: var(--down-bg); }
 .site-headline { margin: 14px 0 10px; color: var(--ink); font-size: 1rem; font-weight: 700; line-height: 1.45; }
+.scope-warning { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; padding: 8px 10px; border: 1px solid #e5d7bd; border-radius: 9px; background: #fffaf0; color: #695b42; font-size: .76rem; line-height: 1.4; }
+.scope-warning b { flex: 0 0 auto; color: #8a6129; }
+.scope-warning span { min-width: 0; }
 .site-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .site-chips > div { padding: 10px 11px; border-radius: 12px; background: var(--soft); }
 .site-chips small, .site-chips b { display: block; }
@@ -119,6 +122,7 @@ main { width: min(1480px, calc(100% - 40px)); margin: 0 auto; padding: 22px 0 42
 .flow-banner { display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; padding: 2px 1px 14px; }
 .flow-banner p { margin: 0; font-size: 1rem; font-weight: 700; }
 .flow-banner p em { color: var(--down); font-style: normal; }
+.flow-banner p small { display: block; margin-top: 3px; color: var(--muted); font-size: .72rem; font-weight: 500; }
 .stage-legend { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: .71rem; }
 .stage-legend span { white-space: nowrap; }
 .stage-legend i { display: inline-block; width: 10px; height: 10px; margin-right: 4px; border-radius: 3px; vertical-align: -1px; }
@@ -155,7 +159,6 @@ main { width: min(1480px, calc(100% - 40px)); margin: 0 auto; padding: 22px 0 42
 .status-chip.na { color: var(--na); background: var(--na-bg); }
 .stage-card > small { color: var(--muted); font-size: .74rem; }
 .stage-values { margin-top: 11px; font-size: .71rem; font-weight: 650; color: var(--ink-2); white-space: nowrap; }
-.stage-arrow { position: absolute; top: 69px; right: -15px; z-index: 2; color: #8ca097; font-size: 1.55rem; font-weight: 350; }
 .stage-tooltip { visibility: hidden; position: absolute; z-index: 80; top: calc(100% + 10px); left: 50%; width: min(310px, 85vw); padding: 13px 14px; border-radius: 12px; color: #eaf2ed; background: #14261e; box-shadow: 0 14px 32px rgba(10,31,22,.26); opacity: 0; transform: translateX(-50%) translateY(-3px); transition: opacity .14s ease, transform .14s ease; pointer-events: none; }
 .stage-tooltip::before { content: ""; position: absolute; top: -6px; left: 50%; width: 12px; height: 12px; background: #14261e; transform: translateX(-50%) rotate(45deg); }
 .stage-card:hover .stage-tooltip, .stage-card:focus-visible .stage-tooltip { visibility: visible; opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -415,7 +418,6 @@ footer { margin-top: 23px; padding: 13px 3px; color: var(--muted); font-size: .6
   .stage-flow { flex-wrap: wrap; gap: 11px; }
   .stage-wrap { flex: 1 1 30%; }
   .stage-wrap.bottleneck-wrap { flex: 1 1 100%; }
-  .stage-arrow { right: -10px; }
   .compare-grid { grid-template-columns: 1fr; }
   .wellness-grid { grid-template-columns: repeat(3, 1fr); }
   .supply-lower { grid-template-columns: 1fr; gap: 18px; }
@@ -436,7 +438,6 @@ footer { margin-top: 23px; padding: 13px 3px; color: var(--muted); font-size: .6
   .stage-flow { flex-direction: column; flex-wrap: nowrap; gap: 8px; }
   .stage-wrap, .stage-wrap.bottleneck-wrap { flex: 1 1 auto; }
   .stage-card { min-height: auto; }
-  .stage-arrow { display: none; }
   .stage-card > strong { margin-top: 9px; }
   .response-grid, .market-grid, .quality-grid { grid-template-columns: 1fr; }
   .supply-cards { grid-template-columns: 1fr; }

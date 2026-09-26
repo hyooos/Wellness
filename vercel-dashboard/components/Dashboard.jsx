@@ -9,7 +9,7 @@ import {
 const PERIODS = ["P1", "P2", "P3", "P4"];
 const PERIOD_LABEL = { P1: "지정 2년 전", P2: "지정 직전", P3: "지정 1년차", P4: "지정 2년차" };
 const STAGES = [
-  ["관심", "숙박검색건수", "숙박 목적지 검색", "티맵"],
+  ["탐색", "숙박검색건수", "숙박 목적지 검색", "티맵"],
   ["방문", "외지인방문자수", "외지인 방문자", "KT"],
   ["숙박", "숙박자비율_pct", "숙박자 비율", "KT"],
   ["체류", "평균체류시간_분", "평균 체류시간", "KT"],
@@ -29,7 +29,7 @@ const INTERVALS = {
   immediate: { label: "지정 직후", before: "P2", after: "P3", growth: "g23_pct", point: "delta23_pctp", status: "지정직후_판정_3pct" },
   second: { label: "2년차", before: "P3", after: "P4", growth: "g34_pct", point: "delta34_pctp", status: "2년차_판정_3pct" },
 };
-const COLORS = { 관심: "#789184", 방문: "#4f7f91", 숙박: "#bd8a45", 체류: "#2f8f6b", 소비: "#916f83" };
+const COLORS = { 탐색: "#789184", 방문: "#4f7f91", 숙박: "#bd8a45", 체류: "#2f8f6b", 소비: "#916f83" };
 
 function finite(value) { return typeof value === "number" && Number.isFinite(value); }
 function formatLevel(value, metric) {
@@ -152,7 +152,7 @@ function StageFlow({ data, selected, intervalKey }) {
   const interval = INTERVALS[intervalKey];
   const site = data.sites[selected];
   return <div className="stage-flow has-bottleneck">
-    {STAGES.map(([stage, metric, description, source], i) => {
+    {STAGES.map(([stage, metric, description, source]) => {
       const row = data.growth.find(r => r.지역키 === selected && r.지표 === metric);
       const code = row?.[interval.status] || "NA";
       const [label, arrow, cls] = STATUS[code] || STATUS.NA;
@@ -161,11 +161,11 @@ function StageFlow({ data, selected, intervalKey }) {
       const after = data.kpi.find(r => r.지역키 === selected && r.기간 === interval.after)?.[metric];
       return <div className={`stage-wrap ${isBottleneck ? "bottleneck-wrap" : ""}`} key={stage}>
         <div className={`stage-card ${cls} ${isBottleneck ? "bottleneck" : ""}`} tabIndex={0} aria-describedby={`stage-tip-${metric}`}>
-          {isBottleneck && <div className="bneck-band">핵심 병목</div>}
+          {isBottleneck && <div className="bneck-band">우선 확인</div>}
           <div className="stage-top"><span>{stage}</span><em>{source}</em></div><div className="stage-change-row"><strong>{arrow} {formatComparedChange(row, metric, interval)}</strong><span className={`status-chip ${cls}`}>{label}</span></div>
           <small>{description}</small><div className="stage-values">{formatLevel(before, metric)} → {formatLevel(after, metric)}</div>
           <StageTooltip data={data} selected={selected} stage={stage} metric={metric} description={description} source={source} />
-        </div>{i < STAGES.length - 1 && <span className="stage-arrow">›</span>}
+        </div>
       </div>;
     })}
   </div>;
@@ -190,7 +190,7 @@ function BottleneckEvidence({ data, selected, intervalKey }) {
   });
   const spread = data.spread.find(r => r.지역키 === selected && r.영역 === "소비" && r.변화구간 === (intervalKey === "immediate" ? "g23" : "g34"));
   const proxy = site.bottleneck.includes("소비") ? PERIODS.map(period => data.kpi.find(k => k.지역키 === selected && k.기간 === period)?.방문자대비관광소비_천원_proxy) : [];
-  return <div className="detail-body"><div className="table-scroll"><table className="detail-table"><thead><tr><th>핵심 병목</th><th>지정 직전</th><th>1년차</th><th>2년차</th><th>{interval.label}</th><th>지정 시점 확인</th></tr></thead><tbody>{rows.map(r => <tr key={r.metric}><td><b>{r.stage}</b><small>{r.description}</small></td><td>{formatLevel(data.kpi.find(k => k.지역키 === selected && k.기간 === "P2")?.[r.metric], r.metric)}</td><td>{formatLevel(data.kpi.find(k => k.지역키 === selected && k.기간 === "P3")?.[r.metric], r.metric)}</td><td>{formatLevel(data.kpi.find(k => k.지역키 === selected && k.기간 === "P4")?.[r.metric], r.metric)}</td><td className={`change-cell ${STATUS[r.code]?.[2] || "na"}`}>{formatComparedChange(r.growth, r.metric, interval)}</td><td><span className={`strength strength-${strengthClass(r.strength)}`}>{r.strength}</span></td></tr>)}</tbody></table></div><p className="evidence-note">{site.evidence}</p>{proxy.length > 0 && <p className="proxy-note"><b>보조지표 · 방문자 대비 소비</b> · 지정 직전 {formatLevel(proxy[1], "방문자대비관광소비_천원_proxy")} → 1년차 {formatLevel(proxy[2], "방문자대비관광소비_천원_proxy")} → 2년차 {formatLevel(proxy[3], "방문자대비관광소비_천원_proxy")}입니다. KT 방문자와 신한카드 소비를 결합한 대리지표이며 실제 1인당 소비가 아닙니다.</p>}{spread && <p className="spread-note"><b>보조 정보 · 시설지 소비 집중도</b> · {spread.시설소재_읍면동}의 군 소비 비중이 {Number(spread.시설동_점유율_before_pct).toFixed(1)}%에서 {Number(spread.시설동_점유율_after_pct).toFixed(1)}%로 변했습니다. 성과 단계가 아닌 소비 위치를 설명하는 참고 정보입니다.</p>}</div>;
+  return <div className="detail-body"><div className="table-scroll"><table className="detail-table"><thead><tr><th>우선 확인 축</th><th>지정 직전</th><th>1년차</th><th>2년차</th><th>{interval.label}</th><th>지정 시점 확인</th></tr></thead><tbody>{rows.map(r => <tr key={r.metric}><td><b>{r.stage}</b><small>{r.description}</small></td><td>{formatLevel(data.kpi.find(k => k.지역키 === selected && k.기간 === "P2")?.[r.metric], r.metric)}</td><td>{formatLevel(data.kpi.find(k => k.지역키 === selected && k.기간 === "P3")?.[r.metric], r.metric)}</td><td>{formatLevel(data.kpi.find(k => k.지역키 === selected && k.기간 === "P4")?.[r.metric], r.metric)}</td><td className={`change-cell ${STATUS[r.code]?.[2] || "na"}`}>{formatComparedChange(r.growth, r.metric, interval)}</td><td><span className={`strength strength-${strengthClass(r.strength)}`}>{r.strength}</span></td></tr>)}</tbody></table></div><p className="evidence-note">{site.evidence}</p>{proxy.length > 0 && <p className="proxy-note"><b>보조지표 · 방문자 대비 소비</b> · 지정 직전 {formatLevel(proxy[1], "방문자대비관광소비_천원_proxy")} → 1년차 {formatLevel(proxy[2], "방문자대비관광소비_천원_proxy")} → 2년차 {formatLevel(proxy[3], "방문자대비관광소비_천원_proxy")}입니다. KT 방문자와 신한카드 소비를 결합한 대리지표이며 실제 1인당 소비가 아닙니다.</p>}{spread && <p className="spread-note"><b>보조 정보 · 시설지 소비 집중도</b> · {spread.시설소재_읍면동}의 군 소비 비중이 {Number(spread.시설동_점유율_before_pct).toFixed(1)}%에서 {Number(spread.시설동_점유율_after_pct).toFixed(1)}%로 변했습니다. 성과 축이 아닌 소비 위치를 설명하는 참고 정보입니다.</p>}</div>;
 }
 
 function CheckPanel({ data, selected }) {
@@ -213,7 +213,7 @@ function MatrixTooltip({ data, regionKey, stage, metric, intervalKey, bottleneck
   const after = data.kpi.find(r => r.지역키 === regionKey && r.기간 === interval.after)?.[metric];
   const growth = data.growth.find(r => r.지역키 === regionKey && r.지표 === metric);
   const code = growth?.[interval.status] || "NA";
-  return <div className="matrix-tooltip" role="tooltip"><div className="tooltip-title">{data.sites[regionKey].region} · {stage}{bottleneck ? " · 핵심 병목" : ""}</div><p>{LABEL[metric]}: <b>{formatLevel(before, metric)} → {formatLevel(after, metric)}</b></p><p>변화: <b>{formatComparedChange(growth, metric, interval)}</b> · {STATUS[code]?.[0] || "자료 없음"}</p></div>;
+  return <div className="matrix-tooltip" role="tooltip"><div className="tooltip-title">{data.sites[regionKey].region} · {stage}{bottleneck ? " · 우선 확인" : ""}</div><p>{LABEL[metric]}: <b>{formatLevel(before, metric)} → {formatLevel(after, metric)}</b></p><p>변화: <b>{formatComparedChange(growth, metric, interval)}</b> · {STATUS[code]?.[0] || "자료 없음"}</p></div>;
 }
 
 function formatEok(value, signed = true) {
@@ -257,7 +257,7 @@ function LodgingSupply({ data, selected }) {
   const insight = {
     전북완주: "자체 숙박은 가능하지만 주변 외부 숙소가 매우 적습니다.",
     전북순창: "자체 숙박은 갖췄지만 주변 연계 숙소는 거의 없습니다.",
-    전남완도: "주변 객실은 충분해 공급 부족만으로 숙박 전환을 설명하기 어렵습니다.",
+    전남완도: "주변 객실은 충분해 낮은 숙박 비율을 공급 부족만으로 설명하기 어렵습니다.",
     전북무주: "시설 내부 숙박 공급이 크고 주변 외부 숙소는 보조 역할을 합니다.",
   }[selected];
   const maxPeriod = Math.max(1, ...supply.periods.map(r => Number(r.주변외부_평균객실수) || 0));
@@ -281,8 +281,8 @@ function DataQuality({ data, selected }) {
   const hasOrigin = (data.origins[selected] || []).length > 0;
   const hasSpread = data.spread.some(r => r.지역키 === selected);
   const rows = [
-    ["관심 · 방문", "시군구 월별", "확보", "ok", "티맵 숙박 검색, KT 외지인 방문"],
-    ["숙박 전환 · 체류", "시군구 월별", "확보", "ok", "KT 숙박자 비율·체류시간, 방문객 수 가중평균"],
+    ["탐색 · 방문", "시군구 월별", "확보", "ok", "티맵 숙박 검색, KT 외지인 방문"],
+    ["숙박 · 체류", "시군구 월별", "확보", "ok", "KT 숙박자 비율·체류시간, 방문객 수 가중평균"],
     ["소비", "시군구 월별", "확보", "ok", "신한카드 내국인 관광소비, 업종별 포함"],
     ["소비 업종별 변화", "시군구 연간", "확보", "ok", "증감액을 중심으로 원인을 살피며 시설 결제액을 뜻하지 않음"],
     ["주변 숙박 공급", "시설 대표점 반경", "보조자료", "partial", "시설 안내자료와 숙박업 인허가 자료를 분리해 표시"],
@@ -292,7 +292,7 @@ function DataQuality({ data, selected }) {
     ["지정 시점 확인", "시군구 월별 48개월", "구조변화 근거", "partial", "비교 지역이 없어 인과효과가 아닌 지정 전후 구조변화"],
     ["시설 자체 성과", "시설", "추후 과제", "missing", "시설 이용 실적은 별도 확보 필요"],
   ];
-  return <div className="quality-grid"><div><h3>지표별 공간 단위와 확보 수준</h3><div className="table-scroll"><table className="quality-table"><thead><tr><th>지표</th><th>공간 단위</th><th>확보 수준</th><th>주의할 점</th></tr></thead><tbody>{rows.map(([metric, unit, level, cls, note]) => <tr key={metric}><td><b>{metric}</b></td><td>{unit}</td><td><span className={`quality-badge ${cls}`}>{level}</span></td><td>{note}</td></tr>)}</tbody></table></div></div><div><h3>핵심 병목의 원인을 확정하려면 필요한 자료</h3><div className="steps">{data.sites[selected].needs.map(([title, desc], i) => <div className="step" key={title}><span>{i + 1}</span><p><small>{title}</small><b>{desc}</b></p></div>)}</div><p className="note">추가 자료를 확보하기 전에는 핵심 병목의 <b>위치</b>까지만 말하고 <b>원인</b>은 확정하지 않습니다.</p></div></div>;
+  return <div className="quality-grid"><div><h3>지표별 공간 단위와 확보 수준</h3><div className="table-scroll"><table className="quality-table"><thead><tr><th>지표</th><th>공간 단위</th><th>확보 수준</th><th>주의할 점</th></tr></thead><tbody>{rows.map(([metric, unit, level, cls, note]) => <tr key={metric}><td><b>{metric}</b></td><td>{unit}</td><td><span className={`quality-badge ${cls}`}>{level}</span></td><td>{note}</td></tr>)}</tbody></table></div></div><div><h3>우선 확인 축의 원인을 판단하려면 필요한 자료</h3><div className="steps">{data.sites[selected].needs.map(([title, desc], i) => <div className="step" key={title}><span>{i + 1}</span><p><small>{title}</small><b>{desc}</b></p></div>)}</div><p className="note">추가 자료를 확보하기 전에는 우선 확인할 <b>성과 축</b>까지만 말하고 <b>원인</b>은 확정하지 않습니다.</p></div></div>;
 }
 
 function FlowChart({ data, selected }) {
@@ -418,7 +418,7 @@ export default function Dashboard() {
   const slopeStrength = itsStrength(data, selected, metric, "지정후기울기변화");
   const levelRobustness = robustnessCount(data, selected, metric, "즉시수준변화");
   const slopeRobustness = robustnessCount(data, selected, metric, "지정후기울기변화");
-  const tabs = [["flow", "흐름 추이"], ["its", "지정 시점 확인"], ["wellness", "웰니스 지표"], ["lodging", "숙박 공급"], ["spending", "소비 업종"], ["market", "방문 출발지"], ["table", "기간별 수치 비교"], ["quality", "데이터 신뢰도"]];
+  const tabs = [["flow", "축별 추이"], ["its", "지정 시점 확인"], ["wellness", "웰니스 지표"], ["lodging", "숙박 공급"], ["spending", "소비 업종"], ["market", "방문 출발지"], ["table", "기간별 수치 비교"], ["quality", "데이터 신뢰도"]];
 
   return <main>
     <header className="topbar"><div className="brand"><b>WELL-FLOW <span>Monitor</span></b><p>웰니스 관광지 성과 진단</p></div><div className="top-meta">{site.region} 분석기간 · {ym(period.P1.시작월)}–{ym(period.P4.종료월)} · 지정월 기준</div></header>
@@ -426,30 +426,31 @@ export default function Dashboard() {
     <section className="hero-grid">
       <div className="panel map-panel"><JeollaMap geo={geo} sites={data.sites} selected={selected} onSelect={setSelected} /></div>
       <div className="panel site-panel">
-        <div className="site-main"><img src={`/sites/${site.image}`} alt={site.site} /><div className="site-copy"><span className="card-label">선택 관광지</span><h1>{site.site}</h1><p className="location">{site.region} {site.dong} · {site.year}년 지정 · {site.theme} 테마</p><p className="address">{site.address}</p><div className="site-pills"><span className="site-pill type">{site.type}</span>{site.caseNote && <span className="site-pill case-note">{site.caseNote}</span>}<span className="site-pill bottleneck">핵심 병목 · {site.bottleneckLabel}</span></div></div></div>
+        <div className="site-main"><img src={`/sites/${site.image}`} alt={site.site} /><div className="site-copy"><span className="card-label">선택 관광지</span><h1>{site.site}</h1><p className="location">{site.region} {site.dong} · {site.year}년 지정 · {site.theme} 테마</p><p className="address">{site.address}</p><div className="site-pills"><span className="site-pill type">{site.type}</span>{site.caseNote && <span className="site-pill case-note">{site.caseNote}</span>}<span className="site-pill bottleneck">우선 확인 · {site.bottleneckLabel}</span></div></div></div>
         <p className="site-headline">{site.headline}</p>
-        <div className="site-chips"><div><small>핵심 병목</small><b>{site.bottleneckLabel}</b></div><div><small>확인 강도</small><b><span className={`strength strength-${strengthClass(site.strength)}`}>{site.strength}</span></b></div><div><small>다음 점검 지표</small><b>{LABEL[site.checkMetric]}</b></div></div>
+        {site.contextWarning && <p className="scope-warning"><b>해석 범위</b><span>{site.contextWarning}</span></p>}
+        <div className="site-chips"><div><small>우선 확인 축</small><b>{site.bottleneckLabel}</b></div><div><small>확인 강도</small><b><span className={`strength strength-${strengthClass(site.strength)}`}>{site.strength}</span></b></div><div><small>다음 점검 지표</small><b>{LABEL[site.checkMetric]}</b></div></div>
       </div>
     </section>
 
-    <SectionTitle number="1" title="병목 진단" subtitle="지정 전후 다섯 단계의 변화 · 카드에 마우스를 올리면 네 구간 값과 통계 근거를 볼 수 있습니다" />
-    <section className="panel diagnosis-panel"><div className="diagnosis-head"><div><span className="eyebrow">비교 구간</span><div className="segmented"><button className={intervalKey === "immediate" ? "active" : ""} onClick={() => setIntervalKey("immediate")}>지정 직후</button><button className={intervalKey === "second" ? "active" : ""} onClick={() => setIntervalKey("second")}>2년차</button></div></div></div><div className="flow-banner"><p>핵심 병목은 <em>{site.bottleneckLabel}</em>입니다.</p><div className="stage-legend"><span><i className="up" />오름 (+3% 초과)</span><span><i className="flat" />유지</span><span><i className="down" />내림 (−3% 미만)</span><span><i className="na" />자료 없음</span><span><i className="bottleneck" />핵심 병목</span></div></div><StageFlow data={data} selected={selected} intervalKey={intervalKey} /><details><summary>핵심 병목 근거 자세히 보기</summary><BottleneckEvidence data={data} selected={selected} intervalKey={intervalKey} /></details></section>
+    <SectionTitle number="1" title="5개 관광성과 축" subtitle="탐색 | 방문 | 숙박 | 체류 | 소비를 서로 다른 데이터로 관측합니다" />
+    <section className="panel diagnosis-panel"><div className="diagnosis-head"><div><span className="eyebrow">비교 구간</span><div className="segmented"><button className={intervalKey === "immediate" ? "active" : ""} onClick={() => setIntervalKey("immediate")}>지정 직후</button><button className={intervalKey === "second" ? "active" : ""} onClick={() => setIntervalKey("second")}>2년차</button></div></div></div><div className="flow-banner"><p>우선 확인할 축은 <em>{site.bottleneckLabel}</em>입니다. <small>각 축은 독립된 지역 관광성과이며 배열 순서는 전환 경로를 뜻하지 않습니다.</small></p><div className="stage-legend"><span><i className="up" />오름 (+3% 초과)</span><span><i className="flat" />유지</span><span><i className="down" />내림 (−3% 미만)</span><span><i className="na" />자료 없음</span><span><i className="bottleneck" />우선 확인</span></div></div><StageFlow data={data} selected={selected} intervalKey={intervalKey} /><details><summary>우선 확인 축의 근거 자세히 보기</summary><BottleneckEvidence data={data} selected={selected} intervalKey={intervalKey} /></details></section>
 
-    <SectionTitle number="2" title="대응 방향" subtitle="핵심 병목에 맞춘 우선 검토 사항과 다음 점검 지표" />
+    <SectionTitle number="2" title="대응 방향" subtitle="자동 처방이 아니라 진단규칙에 따라 후속 확인 순서를 제시합니다" />
     <section className="two-col">
-      <div className="panel response"><div className="response-lead"><small>핵심 병목 · 확인 강도 {site.strength}</small><h3>{site.bottleneckLabel}</h3><p>{site.headline}</p></div><div className="response-grid"><div><h4>우선 검토</h4>{site.recommend.map(([title, desc], i) => <div className="action" key={title}><span>{i + 1}</span><p><b>{title}</b><small>{desc}</small></p></div>)}</div><div className="low"><h4>우선순위 낮음</h4><div className="action"><span>×</span><p><b>{site.avoid[0]}</b><small>{site.avoid[1]}</small></p></div></div></div><p className="good"><b>이미 괜찮은 칸</b> · {site.good}</p></div>
+      <div className="panel response"><div className="response-lead"><small>우선 확인 축 · 근거 강도 {site.strength}</small><h3>{site.bottleneckLabel}</h3><p>{site.headline}</p></div><div className="response-grid"><div><h4>후속 확인 순서</h4>{site.recommend.map(([title, desc], i) => <div className="action" key={title}><span>{i + 1}</span><p><b>{title}</b><small>{desc}</small></p></div>)}</div><div className="low"><h4>우선순위 낮음</h4><div className="action"><span>×</span><p><b>{site.avoid[0]}</b><small>{site.avoid[1]}</small></p></div></div></div><p className="good"><b>현재 양호한 축</b> · {site.good}</p></div>
       <CheckPanel data={data} selected={selected} />
     </section>
 
     <SectionTitle number="3" title="조기 경보 · 지역 비교" subtitle="1년차 하락 지표의 2년차 회복 여부와 네 지역 차이" />
     <section className="compare-grid">
-      <div className="panel warning"><span className="eyebrow">1년차 하락 지표</span>{warningRows.length ? <table><thead><tr><th>단계</th><th>1년차</th><th>2년 누적</th><th>판정</th></tr></thead><tbody>{warningRows.map(r => <tr key={r.metric}><td><b>{r.stage}</b><small>{LABEL[r.metric]}</small></td><td className="negative">{r.y1 > 0 ? "+" : ""}{r.y1.toFixed(1)}%</td><td>{r.y2 > 0 ? "+" : ""}{r.y2.toFixed(1)}%</td><td><span className={`pill ${r.y2 >= -3 ? "up" : "down"}`}>{r.y2 >= -3 ? "회복" : "미회복"}</span></td></tr>)}</tbody></table> : <p className="empty">지정 1년차에 내려간 단계가 없습니다.</p>}<p className="note">2년차 누적이 지정 직전 대비 −3% 이내면 회복으로 봅니다.</p></div>
+      <div className="panel warning"><span className="eyebrow">1년차 하락 지표</span>{warningRows.length ? <table><thead><tr><th>성과 축</th><th>1년차</th><th>2년 누적</th><th>판정</th></tr></thead><tbody>{warningRows.map(r => <tr key={r.metric}><td><b>{r.stage}</b><small>{LABEL[r.metric]}</small></td><td className="negative">{r.y1 > 0 ? "+" : ""}{r.y1.toFixed(1)}%</td><td>{r.y2 > 0 ? "+" : ""}{r.y2.toFixed(1)}%</td><td><span className={`pill ${r.y2 >= -3 ? "up" : "down"}`}>{r.y2 >= -3 ? "회복" : "미회복"}</span></td></tr>)}</tbody></table> : <p className="empty">지정 1년차에 내려간 성과 축이 없습니다.</p>}<p className="note">2년차 누적이 지정 직전 대비 −3% 이내면 회복으로 봅니다.</p></div>
       <div className="panel matrix"><span className="eyebrow">4개 지역 비교 · {interval.label}</span><div className="table-scroll"><table><thead><tr><th>지역</th>{STAGES.map(([s]) => <th key={s}>{s}</th>)}<th>진단 유형</th></tr></thead><tbody>{Object.entries(data.sites).map(([key, s]) => <tr key={key} className={key === selected ? "selected-row" : ""} onClick={() => setSelected(key)}><td><b>{s.region}</b><small>{s.site}</small></td>{STAGES.map(([stage, m]) => { const code = status(key, m); const bottleneck = s.bottleneck.includes(stage); return <td key={m} tabIndex={0} className={`signal ${STATUS[code][2]} ${bottleneck ? "bottleneck" : ""}`}><b>{STATUS[code][1]}</b><small>{change(key, m)}</small><MatrixTooltip data={data} regionKey={key} stage={stage} metric={m} intervalKey={intervalKey} bottleneck={bottleneck} /></td>; })}<td>{s.type}</td></tr>)}</tbody></table></div></div>
     </section>
 
     <SectionTitle number="4" title="상세 근거" subtitle="지표를 선택해 변화의 크기와 데이터 범위를 확인합니다" />
     <section className="panel evidence"><div className="tabs">{tabs.map(([key, title]) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{title}</button>)}</div>
-      {tab === "flow" && <><p className="tab-help">다섯 단계를 첫 구간=100으로 맞췄습니다. 굵은 선은 핵심 병목입니다.</p><FlowChart data={data} selected={selected} /></>}
+      {tab === "flow" && <><p className="tab-help">서로 다른 단위의 5개 성과 축을 비교하기 위해 각각의 첫 구간을 100으로 맞췄습니다. 굵은 선은 우선 확인 축입니다.</p><FlowChart data={data} selected={selected} /></>}
       {tab === "its" && <><div className="metric-select"><label>지표</label><select value={metric} onChange={e => setMetric(e.target.value)}>{ITS_METRICS.map(m => <option key={m} value={m}>{LABEL[m]}</option>)}</select></div><MonthlyChart data={data} selected={selected} metric={metric} /><div className="its-summary"><p><b>지정 시점 변화</b> {its ? itsEffectText(its, metric, "즉시수준변화") : "자료 없음"} · {levelStrength}<small>p {finite(its?.즉시수준변화_p) ? Number(its.즉시수준변화_p).toFixed(3) : "–"} · 보정 q {finite(its?.즉시수준변화_q_BH) ? Number(its.즉시수준변화_q_BH).toFixed(3) : "–"} · 조건 {levelRobustness}/8</small></p><p><b>지정 후 변화 속도</b> {its ? itsEffectText(its, metric, "지정후기울기변화") : "자료 없음"} · {slopeStrength}<small>p {finite(its?.지정후_기울기변화_p) ? Number(its.지정후_기울기변화_p).toFixed(3) : "–"} · 보정 q {finite(its?.지정후_기울기변화_q_BH) ? Number(its.지정후_기울기변화_q_BH).toFixed(3) : "–"} · 조건 {slopeRobustness}/8</small></p></div><p className="note"><b>세 선을 나눈 이유</b> · 실제 값은 월별 관측치, 계절 반영 추정선은 계절·기존 추세·지정 시점 변화를 함께 반영한 모델값입니다. ‘지정 전 흐름이 이어졌다면’은 지정 시점 변화만 빼고 계산한 비교선입니다. 두 추정선의 차이는 지정 시점과 함께 나타난 구조변화를 뜻하며, 비교 지역이 없어 지정의 인과효과로 단정하지 않습니다.</p></>}
       {tab === "wellness" && <><div className="wellness-grid">{["숙박자비율_pct", "숙박자중_3박이상_pct", "전체순방문자중_3박이상_pct", "DSI", "방문자대비관광소비_천원_proxy"].map(m => { const row = data.growth.find(r => r.지역키 === selected && r.지표 === m); return <div key={m}><small>{LABEL[m]}</small><b>{formatLevel(kpi("P3", m), m)}</b><em>지정 직후 {formatChange(periodChange(row, m, "23"), m)}</em><div className="wellness-periods"><span>직전 <b>{formatLevel(kpi("P2", m), m)}</b></span><span>1년차 <b>{formatLevel(kpi("P3", m), m)}</b></span><span>2년차 <b>{formatLevel(kpi("P4", m), m)}</b></span></div></div>; })}</div><p className="note"><b>지표 안내</b> · 장기체류 비율은 전체 방문자 중 3박 이상 숙박객의 비중입니다. 사계절 수요는 월별 방문 편차가 작을수록 1에 가까우며, 방문자 대비 소비는 서로 다른 자료를 결합한 대리지표입니다.</p></>}
       {tab === "lodging" && <LodgingSupply data={data} selected={selected} />}
