@@ -22,7 +22,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "output" / "4개_웰니스관광지_성과분석"
 BOUNDARY_PATH = ROOT / "assets" / "skorea-provinces-geo.json"
 MUNICIPAL_BOUNDARY_PATH = ROOT / "assets" / "jeolla-municipalities-geo.json"

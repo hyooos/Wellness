@@ -11,9 +11,9 @@
     RoomSupply_{g,t} = sum_{i in g} Rooms_i * Active_{i,t}
 
 Active_{i,t}는 "재고(stock)" 지표다 — t 시점에 실제로 영업 중이었는가
-(인허가일자 <= t and (폐업일자 is null or 폐업일자 > t)). 이는
-lodging_supply_analysis.py의 순증(flow, 기간 중 개업-폐업 건수) 지표와
-다른 질문에 답한다: 순증="이 기간 시장이 늘었나 줄었나", 재고="이
+(인허가일자 <= t and (폐업일자 is null or 폐업일자 > t)). 이는 기간 중
+개업-폐업 건수를 보는 순증(flow) 지표와 다른 질문에 답한다: 순증="이
+기간 시장이 늘었나 줄었나", 재고="이
 시점에 실제 존재한 객실이 몇 개인가". 둘 다 legitimate하고, 보고서에는
 나란히 제시한다.
 

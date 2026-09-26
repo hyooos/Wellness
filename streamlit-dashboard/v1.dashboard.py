@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "output" / "4개_웰니스관광지_성과분석"
 
 PERIODS = ["P1", "P2", "P3", "P4"]

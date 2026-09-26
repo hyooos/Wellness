@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "output" / "4개_웰니스관광지_성과분석"
 PERIODS = ["P1", "P2", "P3", "P4"]
 PERIOD_SHORT = {"P1": "지정 2년 전", "P2": "지정 직전", "P3": "지정 1년차", "P4": "지정 2년차"}
