@@ -144,7 +144,7 @@ main { width: min(1480px, calc(100% - 40px)); margin: 0 auto; padding: 22px 0 42
 .stage-top span { font-weight: 850; }
 .stage-top em { color: var(--muted); font-size: .68rem; font-style: normal; }
 .stage-change-row { display: flex; align-items: center; gap: 6px; margin: 15px 0 4px; }
-.stage-change-row strong { font-size: 1.34rem; letter-spacing: -.03em; }
+.stage-change-row strong { font-size: clamp(.84rem, 1vw, 1.15rem); letter-spacing: -.03em; white-space: nowrap; }
 .stage-card.up .stage-change-row strong { color: var(--up); }
 .stage-card.flat .stage-change-row strong { color: var(--flat); }
 .stage-card.down .stage-change-row strong { color: var(--down); }
@@ -191,7 +191,9 @@ summary { width: fit-content; color: var(--leaf-dark); font-size: .78rem; font-w
 .change-cell.flat { color: var(--flat); background: var(--flat-bg); }
 .change-cell.down { color: var(--down); background: var(--down-bg); }
 .change-cell.na { color: var(--na); background: var(--na-bg); }
-.evidence-note, .spread-note { margin: 9px 0 0; padding: 9px 11px; border-radius: 10px; color: var(--ink-2); background: var(--soft); font-size: .74rem; line-height: 1.5; }
+.evidence-note, .proxy-note, .spread-note { margin: 9px 0 0; padding: 9px 11px; border-radius: 10px; color: var(--ink-2); background: var(--soft); font-size: .74rem; line-height: 1.5; }
+.proxy-note { color: var(--muted); }
+.proxy-note b { color: var(--ink-2); }
 .spread-note { color: var(--muted); }
 .spread-note b { color: var(--ink-2); }
 
