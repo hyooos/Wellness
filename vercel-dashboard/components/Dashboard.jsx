@@ -211,8 +211,9 @@ function MatrixTooltip({ data, regionKey, stage, metric, intervalKey, bottleneck
   const interval = INTERVALS[intervalKey];
   const before = data.kpi.find(r => r.지역키 === regionKey && r.기간 === interval.before)?.[metric];
   const after = data.kpi.find(r => r.지역키 === regionKey && r.기간 === interval.after)?.[metric];
-  const code = data.growth.find(r => r.지역키 === regionKey && r.지표 === metric)?.[interval.status] || "NA";
-  return <div className="matrix-tooltip" role="tooltip"><div className="tooltip-title">{data.sites[regionKey].region} · {stage}{bottleneck ? " · 핵심 병목" : ""}</div><p>{LABEL[metric]}: <b>{formatLevel(before, metric)} → {formatLevel(after, metric)}</b> ({STATUS[code]?.[0] || "자료 없음"})</p></div>;
+  const growth = data.growth.find(r => r.지역키 === regionKey && r.지표 === metric);
+  const code = growth?.[interval.status] || "NA";
+  return <div className="matrix-tooltip" role="tooltip"><div className="tooltip-title">{data.sites[regionKey].region} · {stage}{bottleneck ? " · 핵심 병목" : ""}</div><p>{LABEL[metric]}: <b>{formatLevel(before, metric)} → {formatLevel(after, metric)}</b></p><p>변화: <b>{formatComparedChange(growth, metric, interval)}</b> · {STATUS[code]?.[0] || "자료 없음"}</p></div>;
 }
 
 function formatEok(value, signed = true) {
@@ -406,7 +407,7 @@ export default function Dashboard() {
   const site = data.sites[selected]; const periods = data.periods.filter(r => r.지역키 === selected);
   const period = Object.fromEntries(periods.map(r => [r.기간, r])); const interval = INTERVALS[intervalKey];
   const kpi = (periodName, m) => data.kpi.find(r => r.지역키 === selected && r.기간 === periodName)?.[m];
-  const change = (key, m) => formatComparedChange(data.growth.find(r => r.지역키 === key && r.지표 === m), m, interval);
+  const change = (key, m) => { const value = data.growth.find(r => r.지역키 === key && r.지표 === m)?.[interval.growth]; return finite(value) ? `${value > 0 ? "+" : ""}${value.toFixed(1)}%` : "–"; };
   const status = (key, m) => data.growth.find(r => r.지역키 === key && r.지표 === m)?.[interval.status] || "NA";
   const warningRows = STAGES.map(([stage, m]) => {
     const row = data.growth.find(r => r.지역키 === selected && r.지표 === m);

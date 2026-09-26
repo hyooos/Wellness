@@ -264,7 +264,7 @@ td small { display: block; margin-top: 2px; color: var(--muted); font-size: .65r
 .note { margin: 13px 0 0; padding: 9px 11px; border-radius: 8px; background: var(--soft); color: var(--muted); font-size: .7rem; line-height: 1.5; }
 .table-scroll { overflow-x: auto; }
 .matrix .table-scroll { overflow: visible; }
-.matrix table { min-width: 650px; }
+.matrix table { min-width: 650px; table-layout: fixed; }
 .matrix tbody tr { cursor: pointer; transition: background .15s; }
 .matrix tbody tr:hover { background: #f6faf7; }
 .matrix .selected-row { background: var(--leaf-soft); }
@@ -278,7 +278,7 @@ td small { display: block; margin-top: 2px; color: var(--muted); font-size: .65r
 .signal.na { background: var(--na-bg); } .signal.na b { color: var(--na); }
 .signal.bottleneck { z-index: 2; background: #fbe2dc !important; outline: 2.5px solid var(--down); outline-offset: -2.5px; box-shadow: inset 0 -3px var(--down); }
 .signal:hover, .signal:focus-visible, .signal.bottleneck:hover, .signal.bottleneck:focus-visible { z-index: 120; }
-.signal.bottleneck > b { color: #b43e2b; font-size: 1.15rem; }
+.signal.bottleneck > b { color: #b43e2b; font-size: 1rem; }
 .matrix-tooltip { visibility: hidden; position: absolute; z-index: 130; top: calc(100% + 8px); left: 50%; width: 255px; padding: 12px 13px; border-radius: 12px; color: #eaf2ed; background: #14261e; box-shadow: 0 14px 32px rgba(10,31,22,.28); opacity: 0; transform: translateX(-50%) translateY(-3px); transition: opacity .12s ease, transform .12s ease; pointer-events: none; text-align: left; }
 .matrix-tooltip::before { content: ""; position: absolute; top: -6px; left: 50%; width: 12px; height: 12px; background: #14261e; transform: translateX(-50%) rotate(45deg); }
 .signal:hover .matrix-tooltip, .signal:focus-visible .matrix-tooltip { visibility: visible; opacity: 1; transform: translateX(-50%) translateY(0); }
