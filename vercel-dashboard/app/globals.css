@@ -388,16 +388,12 @@ td small { display: block; margin-top: 2px; color: var(--muted); font-size: .65r
 .category-row:hover .category-tooltip, .category-row:focus-visible .category-tooltip { visibility: visible; opacity: 1; transform: translateX(-50%) translateY(0); }
 .empty.compact { min-height: 74px; }
 .market-grid, .quality-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 20px; }
+.market-grid.single { grid-template-columns: minmax(0, 760px); }
 .origin { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; padding: 8px 0; }
 .origin > span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; background: var(--soft); color: var(--leaf-dark); font-size: .68rem; font-weight: 800; }
 .origin p { position: relative; margin: 0; padding-bottom: 7px; font-size: .78rem; }
 .origin i { position: absolute; left: 0; bottom: 0; height: 3px; border-radius: 4px; background: var(--leaf); }
 .origin > b { color: var(--leaf-dark); font-size: .78rem; }
-.poi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
-.poi-grid > div { padding: 15px; border: 1px solid var(--line); border-radius: 11px; background: #fbfdfb; }
-.poi-grid small, .poi-grid b { display: block; }
-.poi-grid small { color: var(--muted); }
-.poi-grid b { margin-top: 4px; color: var(--leaf-dark); font-size: 1.45rem; }
 .period-table { min-width: 910px; margin-top: 17px; }
 .period-table .bottleneck-row { background: var(--down-bg); }
 .quality-grid { grid-template-columns: minmax(650px, 1.1fr) minmax(300px, 1fr); }

@@ -95,23 +95,6 @@ def main() -> None:
     (PUBLIC / "data").mkdir(parents=True, exist_ok=True)
     (PUBLIC / "sites").mkdir(parents=True, exist_ok=True)
 
-    poi = pd.read_csv(SUPPORT / "geo_tourism_density.csv", encoding="utf-8-sig")
-    nearest = pd.read_csv(SUPPORT / "geo_nearest_lodging.csv", encoding="utf-8-sig")
-    aliases = {"쉴랜드": "쉴(SHIL)랜드"}
-    environment = {}
-    for key, site in SITES.items():
-        lookup = aliases.get(site["site"], site["site"])
-        p = poi[poi["시설명"].eq(lookup)]
-        n = nearest[nearest["시설명"].eq(lookup)]
-        environment[key] = {
-            "poi": {str(row["구분"]): int(row["totalCount"]) for _, row in p.iterrows()},
-            "nearest": None if n.empty else {
-                "distanceKm": float(n.iloc[0]["최근접_거리_km"]),
-                "name": str(n.iloc[0]["최근접_업체명"]),
-                "type": str(n.iloc[0]["최근접_업태"]),
-            },
-        }
-
     origins = pd.DataFrame(records("mobility_origin_by_period.csv"))
     origin_top = {}
     for key in SITES:
@@ -158,7 +141,6 @@ def main() -> None:
         "robustness": records("its_robustness.csv"),
         "spread": records("spatial_relative_growth_available_sites.csv"),
         "origins": origin_top,
-        "environment": environment,
         "categoryChange": category_change,
         "lodging": lodging,
     })
