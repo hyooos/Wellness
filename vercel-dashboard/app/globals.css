@@ -268,7 +268,6 @@ td small { display: block; margin-top: 2px; color: var(--muted); font-size: .65r
 .matrix tbody tr { cursor: pointer; transition: background .15s; }
 .matrix tbody tr:hover { background: #f6faf7; }
 .matrix .selected-row { background: var(--leaf-soft); }
-.case-inline { display: block; margin-top: 4px; color: #806824; font-size: .67rem; font-style: normal; font-weight: 700; line-height: 1.35; }
 .signal { position: relative; outline: none; cursor: help; }
 .signal:focus-visible { box-shadow: inset 0 0 0 2px var(--leaf); }
 .signal b { display: block; font-size: 1rem; }
