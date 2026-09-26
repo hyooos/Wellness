@@ -90,6 +90,7 @@ main { width: min(1480px, calc(100% - 40px)); margin: 0 auto; padding: 22px 0 42
 .site-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .site-pill { display: inline-block; padding: 4px 11px; border-radius: 999px; font-size: .74rem; font-weight: 750; }
 .site-pill.type { color: #1c6b4e; background: var(--leaf-soft); }
+.site-pill.case-note { color: #5f4d25; background: #f5edd8; }
 .site-pill.bottleneck { color: #a63a26; background: var(--down-bg); }
 .site-headline { margin: 14px 0 10px; color: var(--ink); font-size: 1rem; font-weight: 700; line-height: 1.45; }
 .site-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -265,6 +266,7 @@ td small { display: block; margin-top: 2px; color: var(--muted); font-size: .65r
 .matrix tbody tr { cursor: pointer; transition: background .15s; }
 .matrix tbody tr:hover { background: #f6faf7; }
 .matrix .selected-row { background: var(--leaf-soft); }
+.case-inline { display: block; margin-top: 4px; color: #806824; font-size: .67rem; font-style: normal; font-weight: 700; line-height: 1.35; }
 .signal { position: relative; outline: none; cursor: help; }
 .signal:focus-visible { box-shadow: inset 0 0 0 2px var(--leaf); }
 .signal b { display: block; font-size: 1rem; }
