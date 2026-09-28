@@ -117,6 +117,9 @@ def main() -> None:
     lodging_current = pd.read_csv(SUPPORT / "4개_관광지_숙박공급_현재.csv", encoding="utf-8-sig")
     lodging_periods = pd.read_csv(SUPPORT / "4개_관광지_숙박공급_P1_P4.csv", encoding="utf-8-sig")
     lodging_inventory = pd.read_csv(SUPPORT / "4개_관광지_숙박업체_상세.csv", encoding="utf-8-sig")
+    lodging_inventory["도로명주소"] = lodging_inventory["도로명주소"].str.replace(
+        "전남광주통합특별시 완도군", "전라남도 완도군", regex=False
+    )
     lodging_sensitivity = pd.read_csv(SUPPORT / "대형부지_5km반경_민감도.csv", encoding="utf-8-sig")
     lodging = {}
     for label, key in lodging_key.items():

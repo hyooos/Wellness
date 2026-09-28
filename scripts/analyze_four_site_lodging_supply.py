@@ -163,7 +163,9 @@ def main() -> None:
                 "양실수": float(row["양실수"] if pd.notna(row["양실수"]) else 0),
                 "한실수": float(row["한실수"] if pd.notna(row["한실수"]) else 0),
                 "총객실수": float(row["rooms"]), "인허가일자": row["인허가일자"].date(),
-                "도로명주소": row["도로명주소"],
+                "도로명주소": str(row["도로명주소"]).replace(
+                    "전남광주통합특별시 완도군", "전라남도 완도군"
+                ),
             })
 
         for radius in RADII_KM:
